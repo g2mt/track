@@ -7,26 +7,19 @@ fn main() {
 
     if args.logs.today {
         todo!("print today's logs");
-    }
-    if args.logs.yesterday {
+    } else if args.logs.yesterday {
         todo!("print yesterday's logs");
-    }
-    if args.logs.this_week {
+    } else if args.logs.this_week {
         todo!("print this week's logs");
-    }
-    if args.logs.this_month {
+    } else if args.logs.this_month {
         todo!("print this month's logs");
-    }
-    if args.logs.this_year {
+    } else if args.logs.this_year {
         todo!("print this year's logs");
-    }
-    if let Some(_daily) = args.daily {
+    } else if let Some(_daily) = args.daily {
         todo!("set daily goal");
-    }
-    if let Some(_from) = args.logs.range.from {
+    } else if let Some(_from) = args.from {
         todo!("print logs from time range");
-    }
-    if let Some(_project) = args.project {
+    } else if let Some(_project) = args.project {
         todo!("start tracking project");
     }
 }

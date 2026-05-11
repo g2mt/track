@@ -8,50 +8,44 @@ pub struct Cli {
     pub file: Option<String>,
 
     /// Set daily goal for a project (e.g. "1h")
-    #[arg(long = "daily")]
+    #[arg(long)]
     pub daily: Option<String>,
 
     #[command(flatten)]
     pub logs: Logs,
+
+    /// Start of time range for logs
+    #[arg(long = "from", conflicts_with = "dated_log")]
+    pub from: Option<String>,
+
+    /// End of time range for logs
+    #[arg(long = "to", conflicts_with = "dated_log")]
+    pub to: Option<String>,
 
     /// Project name
     pub project: Option<String>,
 }
 
 #[derive(Args, Debug)]
-#[group(required = true, multiple = false)]
+#[group(id = "dated_log", required = false, multiple = false)]
 pub struct Logs {
     /// Show today's logs
-    #[arg(long = "today")]
+    #[arg(long)]
     pub today: bool,
 
     /// Show yesterday's logs
-    #[arg(long = "yesterday")]
+    #[arg(long)]
     pub yesterday: bool,
 
     /// Show this week's logs
-    #[arg(long = "this-week")]
+    #[arg(long)]
     pub this_week: bool,
 
     /// Show this month's logs
-    #[arg(long = "this-month")]
+    #[arg(long)]
     pub this_month: bool,
 
     /// Show this year's logs
-    #[arg(long = "this-year")]
+    #[arg(long)]
     pub this_year: bool,
-
-    #[command(flatten)]
-    pub range: LogsRange,
-}
-
-#[derive(Args, Debug)]
-pub struct LogsRange {
-    /// Start of time range for logs
-    #[arg(long = "from")]
-    pub from: Option<String>,
-
-    /// End of time range for logs
-    #[arg(long = "to")]
-    pub to: Option<String>,
 }
