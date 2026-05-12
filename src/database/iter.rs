@@ -30,7 +30,7 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         }
     }
 
-    fn calc_first_entry_offset(&mut self) -> Result<()> {
+    fn seek_first_entry_offset(&mut self) -> Result<()> {
         if self.head_offset.is_some() {
             return Ok(());
         }
@@ -75,12 +75,14 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
         }
         match self.seek_dir {
             Direction::Forward => {
-                iter_try!(self.calc_first_entry_offset());
+                iter_try!(self.seek_first_entry_offset());
             }
             Direction::Backward => {
                 self.seek_dir = Direction::Forward;
                 if let Some(head_offset) = self.head_offset {
                     iter_try!(self.backing.seek(SeekFrom::Start(head_offset)));
+                } else {
+                    iter_try!(self.seek_first_entry_offset());
                 }
             }
         }
