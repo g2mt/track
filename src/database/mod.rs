@@ -12,6 +12,8 @@ pub struct Database<Backing: Seek + Read> {
     backing: Backing,
 }
 
+const PADDING_SIZE: usize = 128;
+
 impl<Backing: Seek + Read> Database<Backing> {
     pub fn new(backing: Backing) -> Self {
         Self { backing }
@@ -21,7 +23,7 @@ impl<Backing: Seek + Read> Database<Backing> {
         self.backing.seek(std::io::SeekFrom::Start(0))?;
 
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; 128];
+        let mut buf = [0u8; PADDING_SIZE];
         loop {
             let n = self.backing.read(&mut buf)?;
             if n == 0 {
@@ -52,7 +54,7 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 
         // Read just the first line to find where \n is
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; 128];
+        let mut buf = [0u8; PADDING_SIZE];
         loop {
             let n = self.backing.read(&mut buf)?;
             if n == 0 {
@@ -67,9 +69,9 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
         let first_line_end = first_line_bytes.len();
 
         let json = serde_json::to_string(info)?;
-        // Total line length (JSON + 1 for \n) must be a multiple of 128
+        // Total line length (JSON + 1 for \n) must be a multiple of PADDING_SIZE
         let line_len = json.len() + 1;
-        let padded_len = line_len.next_multiple_of(128);
+        let padded_len = line_len.next_multiple_of(PADDING_SIZE);
         let padding = padded_len - line_len;
 
         let mut new_line = json.into_bytes();
