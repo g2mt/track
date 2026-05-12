@@ -34,7 +34,10 @@ impl Info {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entry {
+    /// Category of the entry
     pub category: Arc<str>,
+    /// UTC timestamp for when the Entry starts
     pub start_time: u64,
+    /// UTC timestamp for when the Entry ends
     pub end_time: u64,
 }

@@ -15,21 +15,28 @@ fn main() -> Result<()> {
 
     if args.logs.today {
         let (from, to) = time_utils::today()?;
-        return logs::show_logs(Some(from), Some(to));
+        let mut db = args.open_database(false)?;
+        return logs::show_logs(&mut db, Some(from), Some(to));
     } else if args.logs.yesterday {
         let (from, to) = time_utils::yesterday()?;
-        return logs::show_logs(Some(from), Some(to));
+        let mut db = args.open_database(false)?;
+        return logs::show_logs(&mut db, Some(from), Some(to));
     } else if args.logs.this_week {
         let (from, to) = time_utils::this_week()?;
-        return logs::show_logs(Some(from), Some(to));
+        let mut db = args.open_database(false)?;
+        return logs::show_logs(&mut db, Some(from), Some(to));
     } else if args.logs.this_month {
         let (from, to) = time_utils::this_month()?;
-        return logs::show_logs(Some(from), Some(to));
+        let mut db = args.open_database(false)?;
+        return logs::show_logs(&mut db, Some(from), Some(to));
     } else if args.logs.this_year {
         let (from, to) = time_utils::this_year()?;
-        return logs::show_logs(Some(from), Some(to));
+        let mut db = args.open_database(false)?;
+        return logs::show_logs(&mut db, Some(from), Some(to));
     } else if args.from.is_some() || args.to.is_some() {
+        let mut db = args.open_database(false)?;
         return logs::show_logs(
+            &mut db,
             args.from
                 .as_deref()
                 .map(time_utils::parse_datetime)
