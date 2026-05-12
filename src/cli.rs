@@ -23,7 +23,7 @@ pub struct Cli {
     pub to: Option<String>,
 
     /// Project name
-    pub project: Option<String>,
+    pub category: Option<String>,
 }
 
 #[derive(Args, Debug)]
