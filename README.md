@@ -45,7 +45,7 @@ track --from time [--to time]
 
 *track* uses JSONL to track the time. The tracking file is saved at `~/Documents/track.jsonl`
 
-The first line is always an object containing additional information (goals, categories, ...). It has the following format:
+The first line is always an object containing additional information (goals, categories, ...). This object is called the info object, and it follows this template:
 
 ```js
 {
@@ -56,13 +56,15 @@ The first line is always an object containing additional information (goals, cat
 }
 ```
 
-Subsequent lines are arrays representing time entries. Time is always represented using Unix timestamps in UTC.
+The first line is padded by white spaces, such that the length of the first line is a multiple of 128. For instance, if the object is serialized to 200 characters, then the first line will end with $$256 - 200 - 1 = 55$$ white space characters, and the new line `\n` character.
+
+Subsequent lines are arrays representing time entries, and are not padded by white spaces. Time is always represented using Unix timestamps in UTC.
 
 ```js
 ["category", start_time, end_time]
 ```
 
-*track* never ends the JSONL file with a newline. when appending a new entry, a newline is appended to the file, and then the JSON encoded entry is appended. If the file is empty, then a newline character is not appended at the initial position.
+*track* never ends the JSONL file with a new line. When appending a new entry, then the JSON encoded entry is appended, and the new line character is added.
 
 ## License
 
