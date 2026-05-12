@@ -16,6 +16,34 @@ impl<Backing: Seek + Read> Database<Backing> {
     pub fn new(backing: Backing) -> Self {
         Self { backing }
     }
+
+    pub fn read_info(&mut self) -> Result<Info> {
+        self.backing.seek(std::io::SeekFrom::Start(0))?;
+
+        let mut first_line_bytes = Vec::new();
+        let mut buf = [0u8; 1];
+        loop {
+            match self.backing.read(&mut buf)? {
+                0 => break,
+                _ => {
+                    first_line_bytes.push(buf[0]);
+                    if buf[0] == b'\n' {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if first_line_bytes.is_empty() {
+            anyhow::bail!("no info line found");
+        }
+
+        // Remove trailing newline and padding spaces
+        let json_str = String::from_utf8(first_line_bytes)?;
+        let json_str = json_str.trim_end_matches(&[' ', '\n'][..]);
+
+        Ok(serde_json::from_str(json_str)?)
+    }
 }
 
 impl<Backing: Seek + Read + Write> Database<Backing> {
