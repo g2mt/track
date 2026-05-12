@@ -1,4 +1,10 @@
+use std::fs::File;
+use std::path::PathBuf;
+
+use anyhow::Result;
 use clap::{Args, Parser};
+
+use crate::database::Database;
 
 #[derive(Parser, Debug)]
 #[command(name = "track", version, about = "Simple time-tracking CLI utility")]
@@ -24,6 +30,27 @@ pub struct Cli {
 
     /// Project name
     pub category: Option<String>,
+}
+
+impl Cli {
+    fn default_track_file() -> PathBuf {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+        PathBuf::from(home).join("Documents/track.jsonl")
+    }
+
+    pub fn open_database(&self, write: bool) -> Result<Database<File>> {
+        let path = self
+            .file
+            .as_ref()
+            .map(PathBuf::from)
+            .unwrap_or_else(Self::default_track_file);
+        let file = std::fs::OpenOptions::new()
+            .read(true)
+            .write(write)
+            .create(write)
+            .open(&path)?;
+        Ok(Database::new(file))
+    }
 }
 
 #[derive(Args, Debug)]

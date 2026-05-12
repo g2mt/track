@@ -13,8 +13,21 @@ impl Info {
         &self.goals
     }
 
+    pub fn goals_mut(&mut self) -> &mut HashMap<String, u64> {
+        &mut self.goals
+    }
+
     pub fn categories(&self) -> &[String] {
         &self.categories
+    }
+
+    pub fn add_category(&mut self, category: String) -> bool {
+        if self.categories.contains(&category) {
+            false
+        } else {
+            self.categories.push(category);
+            true
+        }
     }
 }
 
