@@ -39,7 +39,15 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
         let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
         elapsed = elapsed.saturating_add(Duration::from_secs(1));
         let elapsed_secs = elapsed.as_secs_f64();
-        let elapsed_str = format_duration(elapsed).to_string();
+        let elapsed_str = if elapsed_secs < max_secs {
+            format!(
+                "{} ({} remaining)",
+                format_duration(elapsed),
+                format_duration(Duration::from_secs((max_secs - elapsed_secs) as _))
+            )
+        } else {
+            format!("{}", format_duration(elapsed),)
+        };
 
         // Build content: category, padding, elapsed_str
         let mut content = Vec::with_capacity(term_w);
