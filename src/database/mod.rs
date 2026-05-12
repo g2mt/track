@@ -20,10 +20,12 @@ pub struct Database<Backing: Seek + Read> {
 const BUFFER_SIZE: usize = 128;
 
 impl<Backing: Seek + Read> Database<Backing> {
+    /// Creates a new `Database` wrapping the given backing storage.
     pub fn new(backing: Backing) -> Self {
         Self { backing }
     }
 
+    /// Reads the metadata header from the first line of the backing storage.
     pub fn read_info(&mut self) -> Result<Option<Info>> {
         self.backing.seek(SeekFrom::Start(0))?;
 
@@ -59,12 +61,14 @@ impl<Backing: Seek + Read> Database<Backing> {
         }
     }
 
+    /// Returns a double-ended iterator over all entries in the backing storage.
     pub fn entries(&mut self) -> iter::Iter<'_, Backing> {
         iter::Iter::new(&mut self.backing)
     }
 }
 
 impl<Backing: Seek + Read + Write> Database<Backing> {
+    /// Writes the metadata header to the first line of the backing storage.
     pub fn write_info(&mut self, info: &Info) -> Result<()> {
         self.backing.seek(SeekFrom::Start(0))?;
 
@@ -116,6 +120,7 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 }
 
 impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
+    /// Appends an entry as a new line at the end of the backing storage.
     pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
         self.backing.seek(SeekFrom::End(0))?;
         let json = serde_json::to_string(entry)?;
@@ -124,6 +129,7 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
         Ok(())
     }
 
+    /// Replaces the last entry in the backing storage in-place.
     pub fn update_last_entry(&mut self, entry: &Entry) -> Result<()> {
         let json = serde_json::to_string(entry)?;
         let entry_line = format!("{}\n", json);
