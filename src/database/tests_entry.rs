@@ -140,3 +140,48 @@ fn iterate_backwards() {
     assert_eq!(iter.next_back().unwrap().unwrap(), entries[0]);
     assert!(iter.next_back().is_none());
 }
+
+#[test]
+fn iterate_backwards_and_forwards() {
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
+
+    db.write_info(&Info::default()).unwrap();
+
+    let entries = [
+        Entry {
+            category: "c1".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "c2".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c3".into(),
+            start_time: 50,
+            end_time: 60,
+        },
+        Entry {
+            category: "c4".into(),
+            start_time: 70,
+            end_time: 80,
+        },
+    ];
+
+    for entry in &entries {
+        db.append_entry(entry).unwrap();
+    }
+
+    let mut iter = db.entries();
+    assert_eq!(iter.next_back().unwrap().unwrap(), entries[3]);
+    assert_eq!(iter.next().unwrap().unwrap(), entries[0]);
+    assert_eq!(iter.next_back().unwrap().unwrap(), entries[2]);
+    assert_eq!(iter.next().unwrap().unwrap(), entries[1]);
+    assert!(iter.next_back().is_none());
+    assert!(iter.next().is_none());
+}
