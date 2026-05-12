@@ -1,17 +1,12 @@
-use std::collections::HashMap;
 use std::io::{Read, Seek, Write};
 
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+
+pub mod schema;
+pub use schema::Info;
 
 #[cfg(test)]
 mod tests;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Info {
-    pub goals: HashMap<String, u64>,
-    pub categories: Vec<String>,
-}
 
 pub struct Database<Backing: Seek + Read> {
     backing: Backing,
