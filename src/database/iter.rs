@@ -1,20 +1,36 @@
-use std::io::{Read, Seek};
+use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 
 use anyhow::Result;
 
 use super::Entry;
+use crate::database::BUFFER_SIZE;
 
 pub struct Iter<'a, Backing: Seek + Read> {
-    backing: &'a mut Backing,
-    done: bool,
+    backing: BufReader<&'a mut Backing>,
 }
 
 impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
-    pub(super) fn new(backing: &'a mut Backing) -> Self {
-        Self {
-            backing,
-            done: false,
+    pub(super) fn try_new(backing: &'a mut Backing) -> Result<Self> {
+        backing.seek(SeekFrom::Start(0))?;
+        let mut buf = [0u8; BUFFER_SIZE];
+        loop {
+            let n = backing.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
+                let extra = n - pos - 1;
+                if extra > 0 {
+                    backing.seek(SeekFrom::Current(-(extra as i64)))?;
+                }
+                return Ok(Self {
+                    backing: BufReader::new(backing),
+                });
+            }
         }
+        Ok(Self {
+            backing: BufReader::new(backing),
+        })
     }
 }
 
@@ -22,32 +38,17 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
     type Item = Result<Entry>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.done {
+        let mut line = Vec::new();
+        let n = self.backing.read_until(b'\n', &mut line).ok()?;
+        if n == 0 {
             return None;
         }
-
-        let mut line = Vec::new();
-        let mut buf = [0u8; 128];
-        loop {
-            let n = self.backing.read(&mut buf).ok()?;
-            if n == 0 {
-                self.done = true;
-                break;
-            }
-            if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
-                line.extend_from_slice(&buf[..pos]);
-                break;
-            }
-            line.extend_from_slice(&buf[..n]);
+        if line.last() == Some(&b'\n') {
+            line.pop();
         }
-
         if line.is_empty() {
             return None;
         }
-
-        match serde_json::from_slice::<Entry>(&line) {
-            Ok(entry) => Some(Ok(entry)),
-            Err(e) => Some(Err(e.into())),
-        }
+        Some(serde_json::from_slice(&line).map_err(Into::into))
     }
 }

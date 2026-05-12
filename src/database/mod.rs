@@ -17,7 +17,7 @@ pub struct Database<Backing: Seek + Read> {
     backing: Backing,
 }
 
-const PADDING_SIZE: usize = 128;
+const BUFFER_SIZE: usize = 128;
 
 impl<Backing: Seek + Read> Database<Backing> {
     pub fn new(backing: Backing) -> Self {
@@ -28,7 +28,7 @@ impl<Backing: Seek + Read> Database<Backing> {
         self.backing.seek(SeekFrom::Start(0))?;
 
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; PADDING_SIZE];
+        let mut buf = [0u8; BUFFER_SIZE];
         loop {
             let n = self.backing.read(&mut buf)?;
             if n == 0 {
@@ -58,6 +58,10 @@ impl<Backing: Seek + Read> Database<Backing> {
             Ok(Some(serde_json::from_str(&json_str)?))
         }
     }
+
+    pub fn entries(&mut self) -> Result<iter::Iter<'_, Backing>> {
+        iter::Iter::try_new(&mut self.backing)
+    }
 }
 
 impl<Backing: Seek + Read + Write> Database<Backing> {
@@ -66,7 +70,7 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 
         // Read just the first line to find where \n is
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; PADDING_SIZE];
+        let mut buf = [0u8; BUFFER_SIZE];
         loop {
             let n = self.backing.read(&mut buf)?;
             if n == 0 {
@@ -83,7 +87,7 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
         let json = serde_json::to_string(info)?;
         // Total line length (JSON + 1 for \n) must be a multiple of PADDING_SIZE
         let line_len = json.len() + 1;
-        let padded_len = line_len.next_multiple_of(PADDING_SIZE);
+        let padded_len = line_len.next_multiple_of(BUFFER_SIZE);
         let padding = padded_len - line_len;
 
         let mut new_line = json.into_bytes();
@@ -112,27 +116,6 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 }
 
 impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
-    pub fn entries(&mut self) -> iter::Iter<'_, Backing> {
-        self.backing.seek(SeekFrom::Start(0)).ok();
-        let mut buf = [0u8; PADDING_SIZE];
-        let mut offset = 0usize;
-        loop {
-            match self.backing.read(&mut buf) {
-                Ok(0) => break,
-                Ok(n) => {
-                    if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
-                        // Position cursor right after the newline
-                        let _ = self.backing.seek(SeekFrom::Start((offset + pos) as u64));
-                        break;
-                    }
-                    offset += n;
-                }
-                _ => break,
-            }
-        }
-        iter::Iter::new(&mut self.backing)
-    }
-
     pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
         self.backing.seek(SeekFrom::End(0))?;
         let json = serde_json::to_string(entry)?;
@@ -148,18 +131,25 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
 
         let mut pos = self.backing.seek(SeekFrom::End(0))?;
         while pos > 0 {
-            let read_size = (pos as usize).min(PADDING_SIZE);
+            let read_size = (pos as usize).min(BUFFER_SIZE);
             pos -= read_size as u64;
             self.backing.seek(SeekFrom::Start(pos))?;
             let mut buf = vec![0u8; read_size];
             self.backing.read_exact(&mut buf)?;
-            if let Some(last_nl) = buf.iter().rposition(|&b| b == b'\n') {
-                self.backing
-                    .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
-                self.backing.write_all(entry_bytes)?;
-                let stream_position = self.backing.stream_position()?;
-                self.backing.set_len(stream_position)?;
-                return Ok(());
+
+            // 1. Skip backwards until we reach the first non-whitespace character
+            let last_idx = buf.iter().rposition(|&b| !b.is_ascii_whitespace());
+            if let Some(idx) = last_idx {
+                // 2. Move to and find the newline before this entry
+                if let Some(last_nl) = buf[..=idx].iter().rposition(|&b| b == b'\n') {
+                    // Update starting AFTER that newline
+                    self.backing
+                        .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
+                    self.backing.write_all(entry_bytes)?;
+                    let stream_position = self.backing.stream_position()?;
+                    self.backing.set_len(stream_position)?;
+                    return Ok(());
+                }
             }
         }
         Ok(())

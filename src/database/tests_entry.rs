@@ -93,7 +93,7 @@ fn append_and_update_entry() {
     };
     db.update_last_entry(&entry2_updated).unwrap();
 
-    let mut iter = db.entries();
+    let mut iter = db.entries().unwrap();
     assert_eq!(iter.next().unwrap().unwrap(), entry1);
     assert_eq!(iter.next().unwrap().unwrap(), entry2_updated);
     assert!(iter.next().is_none());
