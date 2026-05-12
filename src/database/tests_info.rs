@@ -67,7 +67,7 @@ fn read_info_roundtrip() {
 fn read_info_empty_file() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let result = db.read_info();
-    assert!(result == Ok(None));
+    assert!(result.unwrap().is_none());
 }
 
 #[test]

@@ -32,7 +32,7 @@ impl Info {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entry {
     pub category: Arc<str>,
     pub start_time: u64,

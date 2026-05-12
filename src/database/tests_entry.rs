@@ -1,5 +1,7 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::sync::Arc;
 
 use super::*;
 use crate::io_utils::Truncate;
@@ -68,6 +70,8 @@ fn append_and_update_entry() {
         pos: 0,
     });
 
+    db.write_info(&Info::default()).unwrap();
+
     let entry1 = Entry {
         category: "c1".into(),
         start_time: 10,
@@ -89,5 +93,8 @@ fn append_and_update_entry() {
     };
     db.update_last_entry(&entry2_updated).unwrap();
 
-    todo!("entry iter");
+    let mut iter = db.entries();
+    assert_eq!(iter.next().unwrap().unwrap(), entry1);
+    assert_eq!(iter.next().unwrap().unwrap(), entry2_updated);
+    assert!(iter.next().is_none());
 }

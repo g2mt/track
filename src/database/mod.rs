@@ -2,6 +2,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use anyhow::Result;
 
+pub mod iter;
 pub mod schema;
 pub use schema::{Entry, Info};
 
@@ -111,6 +112,27 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 }
 
 impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
+    pub fn entries(&mut self) -> iter::Iter<'_, Backing> {
+        self.backing.seek(SeekFrom::Start(0)).ok();
+        let mut buf = [0u8; PADDING_SIZE];
+        let mut offset = 0usize;
+        loop {
+            match self.backing.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
+                        // Position cursor right after the newline
+                        let _ = self.backing.seek(SeekFrom::Start((offset + pos) as u64));
+                        break;
+                    }
+                    offset += n;
+                }
+                _ => break,
+            }
+        }
+        iter::Iter::new(&mut self.backing)
+    }
+
     pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
         self.backing.seek(SeekFrom::End(0))?;
         let json = serde_json::to_string(entry)?;
