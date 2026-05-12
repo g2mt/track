@@ -30,9 +30,9 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         }
     }
 
-    fn initial_seek_first_entry_offset(&mut self) -> Result<()> {
-        if self.head_offset.is_some() {
-            return Ok(());
+    fn initial_seek_first_entry_offset(&mut self) -> Result<u64> {
+        if let Some (head_offset)  = self.head_offset {
+            return Ok(head_offset);
         }
         self.backing.seek(SeekFrom::Start(0))?;
         let mut buf = [0u8; BUFFER_SIZE];
@@ -51,17 +51,18 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         }
         let offset = self.backing.seek(SeekFrom::Current(0))?;
         self.head_offset = Some(offset);
-        Ok(())
+        Ok(offset)
     }
 
-    fn initial_seek_last_entry_offset(&mut self) -> Result<()> {
-        if self.tail_offset.is_some() {
-            return Ok(());
+    fn initial_seek_last_entry_offset(&mut self) -> Result<u64> {
+        if let Some(offset) = self.tail_offset  {
+            return Ok(offset);
         }
         // The next_back function always expect that the tail_offset starts at a position
         // containing the new line character of the entry to be parsed
-        self.tail_offset = Some(self.backing.seek(SeekFrom::End(0))?);
-        Ok(())
+        let offset = self.backing.seek(SeekFrom::End(0))?;
+        self.tail_offset = Some(offset);
+        Ok(offset)
     }
 }
 
@@ -83,18 +84,25 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
         if self.had_error {
             return None;
         }
-        match self.seek_dir {
+
+        let pos = match self.seek_dir {
             Direction::Forward => {
                 iter_try!(self.initial_seek_first_entry_offset());
+                self.head_offset.unwrap()
             }
             Direction::Backward => {
                 self.seek_dir = Direction::Forward;
                 if let Some(head_offset) = self.head_offset {
-                    iter_try!(self.backing.seek(SeekFrom::Start(head_offset)));
+                    iter_try!(self.backing.seek(SeekFrom::Start(head_offset)))
                 } else {
                     iter_try!(self.initial_seek_first_entry_offset());
+                    self.head_offset.unwrap()
                 }
             }
+        };
+        // End the iteration if the two ends cross
+        if let Some(tail_offset) = self.tail_offset && pos > tail_offset {
+            return None;
         }
 
         // Scan the next line
@@ -134,28 +142,29 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
         if self.had_error {
             return None;
         }
+
         // Always seek the first entry offset to ensure that the info line is skipped
         iter_try!(self.initial_seek_first_entry_offset());
-        // initial_seek_first_entry_offset may updates the file offset, so seeking again is needed
-        match self.seek_dir {
+        // initial_seek_first_entry_offset may updates the file offset, so it is
+        // necessary to seek to the correct position again
+        let mut pos = match self.seek_dir {
             Direction::Forward => {
                 self.seek_dir = Direction::Backward;
                 if let Some(tail_offset) = self.tail_offset {
-                    iter_try!(self.backing.seek(SeekFrom::Start(tail_offset)));
+                    iter_try!(self.backing.seek(SeekFrom::Start(tail_offset)))
                 } else {
-                    iter_try!(self.initial_seek_last_entry_offset());
+                    iter_try!(self.initial_seek_last_entry_offset())
                 }
             }
             Direction::Backward => {
-                iter_try!(self.initial_seek_last_entry_offset());
+                iter_try!(self.initial_seek_last_entry_offset())
             }
-        }
-
-        let mut pos = self.tail_offset.unwrap();
+        };
         assert_eq!(pos, self.backing.seek(SeekFrom::Current(0)).unwrap());
         // eprintln!("pos={}", pos);
 
-        while pos > 0 {
+        // ensure that the back and front do not cross
+        while pos > self.head_offset.unwrap() {
             pos = iter_try!(self.backing.seek(SeekFrom::Current(-(BUFFER_SIZE as i64))));
             let chunk_start = pos;
             let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
