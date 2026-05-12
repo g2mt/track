@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use time::{Duration, Month, OffsetDateTime, Time};
 mod cli;
 mod logs;
 mod track;
@@ -9,15 +10,51 @@ fn main() -> Result<()> {
     let args = Cli::parse();
 
     if args.logs.today {
-        todo!("print today's logs");
+        let now = OffsetDateTime::now_local()?;
+        logs::show_logs(
+            Some(now.replace_time(Time::MIDNIGHT)),
+            Some(now.replace_time(Time::MIDNIGHT) + Duration::DAY),
+        );
     } else if args.logs.yesterday {
-        todo!("print yesterday's logs");
+        let now = OffsetDateTime::now_local()?;
+        let today_start = now.replace_time(Time::MIDNIGHT);
+        logs::show_logs(
+            Some(today_start - Duration::DAY),
+            Some(today_start),
+        );
     } else if args.logs.this_week {
-        todo!("print this week's logs");
+        let now = OffsetDateTime::now_local()?;
+        let week_start =
+            now.replace_time(Time::MIDNIGHT)
+                - Duration::days(now.weekday().number_from_monday() as i64 - 1);
+        logs::show_logs(
+            Some(week_start),
+            Some(week_start + Duration::days(7)),
+        );
     } else if args.logs.this_month {
-        todo!("print this month's logs");
+        let now = OffsetDateTime::now_local()?;
+        let from = now.replace_day(1).unwrap().replace_time(Time::MIDNIGHT);
+        let (next_month, next_year) = if now.month() == Month::December {
+            (Month::January, now.year() + 1)
+        } else {
+            (now.month().next(), now.year())
+        };
+        let to = time::Date::from_calendar_date(next_year, next_month, 1)
+            .unwrap()
+            .with_time(Time::MIDNIGHT)
+            .assume_offset(now.offset());
+        logs::show_logs(Some(from), Some(to));
     } else if args.logs.this_year {
-        todo!("print this year's logs");
+        let now = OffsetDateTime::now_local()?;
+        let from = time::Date::from_calendar_date(now.year(), Month::January, 1)
+            .unwrap()
+            .with_time(Time::MIDNIGHT)
+            .assume_offset(now.offset());
+        let to = time::Date::from_calendar_date(now.year() + 1, Month::January, 1)
+            .unwrap()
+            .with_time(Time::MIDNIGHT)
+            .assume_offset(now.offset());
+        logs::show_logs(Some(from), Some(to));
     } else if args.from.is_some() || args.to.is_some() {
         logs::show_logs(
             args.from
