@@ -95,6 +95,8 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
         if line.is_empty() {
             return None;
         }
+        // In order to allow serde_json deserialization to return an error
+        // without ending the iterator, had_error setting is skipped here
         Some(serde_json::from_slice(&line).map_err(Into::into))
     }
 }
