@@ -58,29 +58,9 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         if self.tail_offset.is_some() {
             return Ok(());
         }
-        let mut pos = self.backing.seek(SeekFrom::End(0))?;
-        while pos > 0 {
-            pos = self
-                .backing
-                .seek(SeekFrom::Current(-(BUFFER_SIZE as i64)))?;
-            let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
-            let n = self.backing.read(&mut buf)?;
-            buf.truncate(n);
-
-            // 1. Skip backwards until we reach the first non-whitespace character
-            let last_idx = buf.iter().rposition(|&b| !b.is_ascii_whitespace());
-            if let Some(idx) = last_idx {
-                // 2. Move to and find the newline before this entry
-                if let Some(last_nl) = buf[..=idx].iter().rposition(|&b| b == b'\n') {
-                    // The last entry starts AFTER that newline
-                    let offset = self
-                        .backing
-                        .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
-                    self.tail_offset = Some(offset);
-                    return Ok(());
-                }
-            }
-        }
+        // The next_back function always expect that the tail_offset starts at a position
+        // containing the new line character of the entry to be parsed
+        self.tail_offset = Some(self.backing.seek(SeekFrom::End(0))?);
         Ok(())
     }
 }
@@ -171,7 +151,7 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
             }
         }
 
-        let mut pos = iter_try!(self.backing.seek(SeekFrom::End(0)));
+        let mut pos = self.tail_offset.unwrap();
         while pos > 0 {
             pos = iter_try!(self.backing.seek(SeekFrom::Current(-(BUFFER_SIZE as i64))));
             let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
@@ -195,10 +175,11 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
                 // Scan the next line
                 let mut line = Vec::new();
                 let n = iter_try!(self.backing.read_until(b'\n', &mut line));
-                // Seek back to the end of the previous line after scanning
-                iter_try!(self.backing.seek(SeekFrom::Start(
+                // Seek back to the end of the previous line after scanning,
+                // and set the seek position for the next iteration
+                self.tail_offset = Some(iter_try!(self.backing.seek(SeekFrom::Start(
                     pos + TryInto::<u64>::try_into(last_nl).unwrap()
-                )));
+                ))));
                 if n == 0 {
                     return None;
                 }
@@ -216,6 +197,7 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
             }
         }
 
+        self.tail_offset = Some(0);
         None
     }
 }
