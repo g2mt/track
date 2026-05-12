@@ -4,9 +4,9 @@ Simple time-tracking CLI utility
 
 ## Usage
 
-The project name being manipulated is always the positional argument at the end.
+The category name being manipulated is always the positional argument at the end.
 
-**Start tracking a project.** This command starts the timer in the foreground, showing a 1-line progress bar. Press Ctrl-C to exit the tracking.
+**Start tracking a category.** This command starts the timer in the foreground, showing a 1-line progress bar. Press Ctrl-C to exit the tracking.
 
 ```bash
 track project1
