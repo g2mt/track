@@ -131,25 +131,28 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
 
         let mut pos = self.backing.seek(SeekFrom::End(0))?;
         while pos > 0 {
-            let read_size = (pos as usize).min(BUFFER_SIZE);
-            pos -= read_size as u64;
-            self.backing.seek(SeekFrom::Start(pos))?;
-            let mut buf = vec![0u8; read_size];
-            self.backing.read_exact(&mut buf)?;
+            pos = self
+                .backing
+                .seek(SeekFrom::Current(-(BUFFER_SIZE as i64)))?;
+            let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
+            let n = self.backing.read(&mut buf)?;
+            buf.truncate(n);
 
-            // 1. Skip backwards until we reach the first non-whitespace character
-            let last_idx = buf.iter().rposition(|&b| !b.is_ascii_whitespace());
-            if let Some(idx) = last_idx {
-                // 2. Move to and find the newline before this entry
-                if let Some(last_nl) = buf[..=idx].iter().rposition(|&b| b == b'\n') {
-                    // Update starting AFTER that newline
-                    self.backing
-                        .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
-                    self.backing.write_all(entry_bytes)?;
-                    let stream_position = self.backing.stream_position()?;
-                    self.backing.set_len(stream_position)?;
-                    return Ok(());
-                }
+            let last_nl = buf
+                .iter()
+                .enumerate() // track byte indices
+                .rev() // iterate from end of buffer
+                .skip_while(|(_, b)| b.is_ascii_whitespace()) // skip trailing whitespace/newlines
+                .find(|(_, b)| **b == b'\n') // find the newline before the entry
+                .map(|(idx, _)| idx); // extract the index
+
+            if let Some(last_nl) = last_nl {
+                self.backing
+                    .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
+                self.backing.write_all(entry_bytes)?;
+                let stream_position = self.backing.stream_position()?;
+                self.backing.set_len(stream_position)?;
+                return Ok(());
             }
         }
         Ok(())
