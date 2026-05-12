@@ -8,7 +8,7 @@ use terminal_size::terminal_size;
 
 use crate::database::{Database, Entry};
 
-pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
+pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> {
     let pair = Arc::new((Mutex::new(false), Condvar::new()));
     let p = pair.clone();
     ctrlc::set_handler(move || {
@@ -20,6 +20,14 @@ pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
     let start = SystemTime::now();
     let mut elapsed = Duration::default();
     let max_secs = 5.0;
+
+    let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+    let mut db_entry = Entry {
+        category: category.clone(),
+        start_time,
+        end_time: start_time,
+    };
+    db.append_entry(&db_entry)?;
 
     let (lock, cvar) = &*pair;
     let mut stop = lock.lock().unwrap();
@@ -55,20 +63,23 @@ pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
         std::io::stdout().flush()?;
 
         stop = cvar.wait_timeout(stop, Duration::from_secs(1)).unwrap().0;
+
+        if elapsed.as_secs() % 300 == 0 {
+            let end_time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs();
+            db_entry.end_time = end_time;
+            db.update_last_entry(&db_entry)?;
+        }
     }
     drop(stop);
 
-    let end_ts = std::time::SystemTime::now()
+    // One last save
+    let end_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
-    let start_ts = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
-
-    let entry = Entry {
-        category: category.into(),
-        start_time: start_ts,
-        end_time: end_ts,
-    };
-    db.append_entry(&entry)?;
+    db_entry.end_time = end_time;
+    db.update_last_entry(&db_entry)?;
 
     // Move past the progress bar line
     print!("\n");

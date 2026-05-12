@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use anyhow::Result;
 use clap::Parser;
 
@@ -7,8 +5,7 @@ mod cli;
 use cli::Cli;
 
 mod database;
-use crate::database::Database;
-
+mod io_utils;
 mod logs;
 mod time_utils;
 mod track;
@@ -58,6 +55,6 @@ fn main() -> Result<()> {
         Ok(())
     } else {
         let mut db = args.open_database(true)?;
-        track::track(db, &category)
+        track::track(db, category)
     }
 }

@@ -5,8 +5,12 @@ use anyhow::Result;
 pub mod schema;
 pub use schema::{Entry, Info};
 
+use crate::io_utils::Truncate;
+
 #[cfg(test)]
-mod tests;
+mod tests_entry;
+#[cfg(test)]
+mod tests_info;
 
 pub struct Database<Backing: Seek + Read> {
     backing: Backing,
@@ -104,12 +108,38 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 
         Ok(())
     }
+}
 
+impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
     pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
         self.backing.seek(SeekFrom::End(0))?;
         let json = serde_json::to_string(entry)?;
         self.backing.write_all(json.as_bytes())?;
         self.backing.write_all(b"\n")?;
+        Ok(())
+    }
+
+    pub fn update_last_entry(&mut self, entry: &Entry) -> Result<()> {
+        let json = serde_json::to_string(entry)?;
+        let entry_line = format!("{}\n", json);
+        let entry_bytes = entry_line.as_bytes();
+
+        let mut pos = self.backing.seek(SeekFrom::End(0))?;
+        while pos > 0 {
+            let read_size = (pos as usize).min(PADDING_SIZE);
+            pos -= read_size as u64;
+            self.backing.seek(SeekFrom::Start(pos))?;
+            let mut buf = vec![0u8; read_size];
+            self.backing.read_exact(&mut buf)?;
+            if let Some(last_nl) = buf.iter().rposition(|&b| b == b'\n') {
+                self.backing
+                    .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
+                self.backing.write_all(entry_bytes)?;
+                let stream_position = self.backing.stream_position()?;
+                self.backing.set_len(stream_position)?;
+                return Ok(());
+            }
+        }
         Ok(())
     }
 }
