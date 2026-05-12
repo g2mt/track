@@ -23,9 +23,9 @@ pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
 
     let (lock, cvar) = &*pair;
     let mut stop = lock.lock().unwrap();
-    let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
 
     while !*stop {
+        let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
         elapsed = elapsed.saturating_add(Duration::from_secs(1));
         let elapsed_secs = elapsed.as_secs_f64();
         let elapsed_str = format_duration(elapsed).to_string();
