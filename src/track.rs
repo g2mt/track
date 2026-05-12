@@ -46,7 +46,7 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
                 format_duration(Duration::from_secs((max_secs - elapsed_secs) as _))
             )
         } else {
-            format!("{}", format_duration(elapsed),)
+            format!("{}", format_duration(elapsed))
         };
 
         // Build content: category, padding, elapsed_str
@@ -62,15 +62,21 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
         let filled = ((elapsed_secs / max_secs) * term_w as f64).clamp(0.0, term_w as f64) as usize;
         let mut line = String::with_capacity(term_w + 64);
         line.push('\r');
+        let filled_style = anstyle::Style::new()
+            .bg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::White)))
+            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Black)));
+        let empty_style = anstyle::Style::new()
+            .bg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack)));
+
         for (i, &ch) in content.iter().enumerate() {
             if i < filled {
-                line.push_str("\x1b[47;30m");
+                line.push_str(&format!("{}", filled_style.render()));
             } else {
-                line.push_str("\x1b[100m");
+                line.push_str(&format!("{}", empty_style.render()));
             }
             line.push(ch);
         }
-        line.push_str("\x1b[0m");
+        line.push_str(&format!("{}", anstyle::Reset.render()));
         print!("{}", line);
         std::io::stdout().flush()?;
 

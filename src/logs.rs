@@ -42,14 +42,15 @@ pub fn show_logs(
 
     // Header: yellow FROM .. TO
     if let (Some(from_dt), Some(to_dt)) = (from, to) {
-        let fmt = time::format_description::parse(
-            "[year]-[month]-[day] [hour]:[minute]:[second]",
-        )
-        .expect("valid format description");
+        let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
+            .expect("valid format description");
         println!(
-            "\x1b[33m{} .. {}\x1b[0m\n",
+            "{}{}{} .. {}{}\n",
+            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow))),
             from_dt.format(&fmt).unwrap(),
+            anstyle::Reset,
             to_dt.format(&fmt).unwrap(),
+            anstyle::Reset,
         );
     }
 
@@ -57,9 +58,14 @@ pub fn show_logs(
     for (category, duration) in &categories {
         let d = std::time::Duration::from_secs(*duration);
         println!(
-            "  \x1b[1m{}\x1b[0m \x1b[90m({})\x1b[0m",
+            "  {}{}{} {}{}{}",
+            anstyle::Style::new().bold(),
             category,
+            anstyle::Reset,
+            anstyle::Style::new()
+                .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack))),
             humantime::format_duration(d),
+            anstyle::Reset,
         );
     }
 
@@ -67,7 +73,10 @@ pub fn show_logs(
     println!();
     let total_d = std::time::Duration::from_secs(total);
     println!(
-        "\x1b[34mTotal time:\x1b[0m {}",
+        "{}{}Total time:{} {}",
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue))),
+        anstyle::Style::new().bold(),
+        anstyle::Reset,
         humantime::format_duration(total_d),
     );
 
