@@ -84,11 +84,16 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
                 }
             }
         }
+
+        // Scan the next line
         let mut line = Vec::new();
-        let n = self.backing.read_until(b'\n', &mut line).ok()?;
+        let n = iter_try!(self.backing.read_until(b'\n', &mut line));
         if n == 0 {
             return None;
         }
+        *self.head_offset.as_mut().unwrap() += n as u64;
+
+        // Decode the next line
         if line.last() == Some(&b'\n') {
             line.pop();
         }
@@ -103,6 +108,20 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
 
 impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        todo!()
+        macro_rules! iter_try {
+            ($expr:expr) => {{
+                match $expr {
+                    Ok(x) => x,
+                    Err(e) => {
+                        self.had_error = true;
+                        return Some(Err(e.into()));
+                    }
+                }
+            }};
+        }
+        if self.had_error {
+            return None;
+        }
+        match self.seek_dir {}
     }
 }
