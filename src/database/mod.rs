@@ -59,8 +59,8 @@ impl<Backing: Seek + Read> Database<Backing> {
         }
     }
 
-    pub fn entries(&mut self) -> Result<iter::Iter<'_, Backing>> {
-        iter::Iter::try_new(&mut self.backing)
+    pub fn entries(&mut self) -> iter::Iter<'_, Backing> {
+        iter::Iter::new(&mut self.backing)
     }
 }
 
