@@ -1,6 +1,6 @@
 use std::io::Write;
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 use humantime::format_duration;
@@ -17,13 +17,12 @@ pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
         cvar.notify_one();
     })?;
 
-    let start = Instant::now();
+    let start = SystemTime::now();
     let mut elapsed = Duration::default();
     let max_secs = 5.0;
 
     let (lock, cvar) = &*pair;
     let mut stop = lock.lock().unwrap();
-
     while !*stop {
         let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
         elapsed = elapsed.saturating_add(Duration::from_secs(1));
@@ -57,14 +56,12 @@ pub fn track(mut db: Database<std::fs::File>, category: &str) -> Result<()> {
 
         stop = cvar.wait_timeout(stop, Duration::from_secs(1)).unwrap().0;
     }
-
     drop(stop);
 
-    let elapsed = start.elapsed();
     let end_ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
-    let start_ts = end_ts - elapsed.as_secs();
+    let start_ts = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
 
     let entry = Entry {
         category: category.into(),
