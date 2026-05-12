@@ -46,10 +46,14 @@ impl Write for MockFile {
 impl Seek for MockFile {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         let data_len = self.data.borrow().len();
-        let new_pos = match pos {
-            SeekFrom::Start(p) => p,
-            SeekFrom::End(p) => (data_len as i64 + p) as u64,
-            SeekFrom::Current(p) => (self.pos as i64 + p) as u64,
+        let new_pos: u64 = match pos {
+            SeekFrom::Start(p) => p.try_into().unwrap(),
+            SeekFrom::End(p) => p.strict_add_unsigned(data_len as u64).try_into().unwrap(),
+            SeekFrom::Current(p) => p
+                .strict_add_unsigned(self.pos as u64)
+                .clamp(0, data_len as i64)
+                .try_into()
+                .unwrap(),
         };
         self.pos = new_pos;
         Ok(self.pos)
