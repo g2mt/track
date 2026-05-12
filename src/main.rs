@@ -51,9 +51,10 @@ fn main() -> Result<()> {
     if let Some(daily) = &args.daily {
         let daily = daily.parse::<humantime::Duration>()?;
         let mut db = args.open_database(true)?;
-        let mut info = db.read_info()?;
+        let mut info = db.read_info()?.unwrap_or_default();
         info.goals_mut().insert(category.clone(), daily.as_secs());
         println!("Set daily goal for {} to {}", category, daily);
+        db.write_info(&info)?;
         Ok(())
     } else {
         track::track(&category)

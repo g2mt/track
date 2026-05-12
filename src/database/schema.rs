@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Info {
     pub(super) goals: HashMap<Arc<str>, u64>,
     pub(super) categories: Vec<Arc<str>>,

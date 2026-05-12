@@ -19,7 +19,7 @@ impl<Backing: Seek + Read> Database<Backing> {
         Self { backing }
     }
 
-    pub fn read_info(&mut self) -> Result<Info> {
+    pub fn read_info(&mut self) -> Result<Option<Info>> {
         self.backing.seek(SeekFrom::Start(0))?;
 
         let mut first_line_bytes = Vec::new();
@@ -36,15 +36,22 @@ impl<Backing: Seek + Read> Database<Backing> {
             first_line_bytes.extend_from_slice(&buf[..n]);
         }
 
-        if first_line_bytes.is_empty() {
-            anyhow::bail!("no info line found");
+        // Trim empty space at end of line
+        if let Some(last_idx) = first_line_bytes
+            .iter()
+            .rposition(|&b| b != b'\n' && b != b' ')
+        {
+            first_line_bytes.truncate(last_idx + 1);
+        } else {
+            first_line_bytes.clear();
         }
 
-        // Remove trailing newline and padding spaces
-        let json_str = String::from_utf8(first_line_bytes)?;
-        let json_str = json_str.trim_end_matches(&[' ', '\n'][..]);
-
-        Ok(serde_json::from_str(json_str)?)
+        if first_line_bytes.is_empty() {
+            Ok(None)
+        } else {
+            let json_str = String::from_utf8(first_line_bytes)?;
+            Ok(Some(serde_json::from_str(&json_str)?))
+        }
     }
 }
 
