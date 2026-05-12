@@ -54,7 +54,7 @@ fn main() -> Result<()> {
         db.write_info(&info)?;
         Ok(())
     } else {
-        let mut db = args.open_database(true)?;
+        let db = args.open_database(true)?;
         track::track(db, category)
     }
 }

@@ -9,6 +9,10 @@ use terminal_size::terminal_size;
 use crate::database::{Database, Entry};
 
 pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> {
+    let mut info = db.read_info()?.unwrap_or_default();
+    info.add_category(category.clone());
+    db.write_info(&info)?;
+
     let pair = Arc::new((Mutex::new(false), Condvar::new()));
     let p = pair.clone();
     ctrlc::set_handler(move || {
@@ -19,7 +23,7 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
 
     let start = SystemTime::now();
     let mut elapsed = Duration::default();
-    let max_secs = 5.0;
+    let max_secs = info.goals().get(&category).copied().unwrap_or(3600) as f64;
 
     let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
     let mut db_entry = Entry {

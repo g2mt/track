@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, TryLockError};
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -50,6 +50,7 @@ impl Cli {
             .write(write)
             .create(write)
             .open(&path)?;
+        file.try_lock()?;
         Ok(Database::new(file))
     }
 }
