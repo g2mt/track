@@ -1,4 +1,4 @@
-use std::io::{Read, Seek, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 use anyhow::Result;
 
@@ -20,7 +20,7 @@ impl<Backing: Seek + Read> Database<Backing> {
     }
 
     pub fn read_info(&mut self) -> Result<Info> {
-        self.backing.seek(std::io::SeekFrom::Start(0))?;
+        self.backing.seek(SeekFrom::Start(0))?;
 
         let mut first_line_bytes = Vec::new();
         let mut buf = [0u8; PADDING_SIZE];
@@ -50,7 +50,7 @@ impl<Backing: Seek + Read> Database<Backing> {
 
 impl<Backing: Seek + Read + Write> Database<Backing> {
     pub fn write_info(&mut self, info: &Info) -> Result<()> {
-        self.backing.seek(std::io::SeekFrom::Start(0))?;
+        self.backing.seek(SeekFrom::Start(0))?;
 
         // Read just the first line to find where \n is
         let mut first_line_bytes = Vec::new();

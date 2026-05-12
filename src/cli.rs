@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::{Args, Parser};
@@ -29,7 +30,7 @@ pub struct Cli {
     pub to: Option<String>,
 
     /// Project name
-    pub category: Option<String>,
+    pub category: Option<Arc<str>>,
 }
 
 impl Cli {

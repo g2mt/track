@@ -46,17 +46,16 @@ fn main() -> Result<()> {
 
     let category = args
         .category
-        .as_ref()
+        .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
     if let Some(daily) = &args.daily {
         let daily = daily.parse::<humantime::Duration>()?;
         let mut db = args.open_database(true)?;
         let mut info = db.read_info()?;
-        info.goals_mut()
-            .insert(category.to_string(), daily.as_secs());
-        println!("Set daily goal for to {}", daily);
+        info.goals_mut().insert(category.clone(), daily.as_secs());
+        println!("Set daily goal for {} to {}", category, daily);
         Ok(())
     } else {
-        track::track(category)
+        track::track(&category)
     }
 }
