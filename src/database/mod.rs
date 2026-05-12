@@ -21,17 +21,17 @@ impl<Backing: Seek + Read> Database<Backing> {
         self.backing.seek(std::io::SeekFrom::Start(0))?;
 
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; 1];
+        let mut buf = [0u8; 128];
         loop {
-            match self.backing.read(&mut buf)? {
-                0 => break,
-                _ => {
-                    first_line_bytes.push(buf[0]);
-                    if buf[0] == b'\n' {
-                        break;
-                    }
-                }
+            let n = self.backing.read(&mut buf)?;
+            if n == 0 {
+                break;
             }
+            if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
+                first_line_bytes.extend_from_slice(&buf[..=pos]);
+                break;
+            }
+            first_line_bytes.extend_from_slice(&buf[..n]);
         }
 
         if first_line_bytes.is_empty() {
@@ -52,17 +52,17 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
 
         // Read just the first line to find where \n is
         let mut first_line_bytes = Vec::new();
-        let mut buf = [0u8; 1];
+        let mut buf = [0u8; 128];
         loop {
-            match self.backing.read(&mut buf)? {
-                0 => break,
-                _ => {
-                    first_line_bytes.push(buf[0]);
-                    if buf[0] == b'\n' {
-                        break;
-                    }
-                }
+            let n = self.backing.read(&mut buf)?;
+            if n == 0 {
+                break;
             }
+            if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
+                first_line_bytes.extend_from_slice(&buf[..=pos]);
+                break;
+            }
+            first_line_bytes.extend_from_slice(&buf[..n]);
         }
         let first_line_end = first_line_bytes.len();
 
