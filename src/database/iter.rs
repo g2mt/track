@@ -30,7 +30,7 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         }
     }
 
-    fn seek_first_entry_offset(&mut self) -> Result<()> {
+    fn initial_seek_first_entry_offset(&mut self) -> Result<()> {
         if self.head_offset.is_some() {
             return Ok(());
         }
@@ -51,6 +51,36 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
         }
         let offset = self.backing.seek(SeekFrom::Current(0))?;
         self.head_offset = Some(offset);
+        Ok(())
+    }
+
+    fn initial_seek_last_entry_offset(&mut self) -> Result<()> {
+        if self.tail_offset.is_some() {
+            return Ok(());
+        }
+        let mut pos = self.backing.seek(SeekFrom::End(0))?;
+        while pos > 0 {
+            pos = self
+                .backing
+                .seek(SeekFrom::Current(-(BUFFER_SIZE as i64)))?;
+            let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
+            let n = self.backing.read(&mut buf)?;
+            buf.truncate(n);
+
+            // 1. Skip backwards until we reach the first non-whitespace character
+            let last_idx = buf.iter().rposition(|&b| !b.is_ascii_whitespace());
+            if let Some(idx) = last_idx {
+                // 2. Move to and find the newline before this entry
+                if let Some(last_nl) = buf[..=idx].iter().rposition(|&b| b == b'\n') {
+                    // The last entry starts AFTER that newline
+                    let offset = self
+                        .backing
+                        .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
+                    self.tail_offset = Some(offset);
+                    return Ok(());
+                }
+            }
+        }
         Ok(())
     }
 }
@@ -75,14 +105,14 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
         }
         match self.seek_dir {
             Direction::Forward => {
-                iter_try!(self.seek_first_entry_offset());
+                iter_try!(self.initial_seek_first_entry_offset());
             }
             Direction::Backward => {
                 self.seek_dir = Direction::Forward;
                 if let Some(head_offset) = self.head_offset {
                     iter_try!(self.backing.seek(SeekFrom::Start(head_offset)));
                 } else {
-                    iter_try!(self.seek_first_entry_offset());
+                    iter_try!(self.initial_seek_first_entry_offset());
                 }
             }
         }
@@ -124,6 +154,68 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
         if self.had_error {
             return None;
         }
-        match self.seek_dir {}
+        // Always seek the first entry offset to ensure that the info line is skipped
+        iter_try!(self.initial_seek_first_entry_offset());
+        // initial_seek_first_entry_offset may updates the file offset, so seeking again is needed
+        match self.seek_dir {
+            Direction::Forward => {
+                self.seek_dir = Direction::Backward;
+                if let Some(tail_offset) = self.tail_offset {
+                    iter_try!(self.backing.seek(SeekFrom::Start(tail_offset)));
+                } else {
+                    iter_try!(self.initial_seek_last_entry_offset());
+                }
+            }
+            Direction::Backward => {
+                iter_try!(self.initial_seek_last_entry_offset());
+            }
+        }
+
+        let mut pos = iter_try!(self.backing.seek(SeekFrom::End(0)));
+        while pos > 0 {
+            pos = iter_try!(self.backing.seek(SeekFrom::Current(-(BUFFER_SIZE as i64))));
+            let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
+            let n = iter_try!(self.backing.read(&mut buf));
+            buf.truncate(n);
+
+            let last_nl = buf
+                .iter()
+                .enumerate() // track byte indices
+                .rev() // iterate from end of buffer
+                .skip_while(|(_, b)| b.is_ascii_whitespace()) // skip trailing whitespace/newlines
+                .find(|(_, b)| **b == b'\n') // find the newline before the entry
+                .map(|(idx, _)| idx); // extract the index
+
+            if let Some(last_nl) = last_nl {
+                // Seek to after the new line character
+                iter_try!(self.backing.seek(SeekFrom::Start(
+                    pos + TryInto::<u64>::try_into(last_nl).unwrap() + 1
+                )));
+
+                // Scan the next line
+                let mut line = Vec::new();
+                let n = iter_try!(self.backing.read_until(b'\n', &mut line));
+                // Seek back to the end of the previous line after scanning
+                iter_try!(self.backing.seek(SeekFrom::Start(
+                    pos + TryInto::<u64>::try_into(last_nl).unwrap()
+                )));
+                if n == 0 {
+                    return None;
+                }
+
+                // Decode the next line
+                if line.last() == Some(&b'\n') {
+                    line.pop();
+                }
+                if line.is_empty() {
+                    return None;
+                }
+                // In order to allow serde_json deserialization to return an error
+                // without ending the iterator, had_error setting is skipped here
+                return Some(serde_json::from_slice(&line).map_err(Into::into));
+            }
+        }
+
+        None
     }
 }
