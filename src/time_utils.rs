@@ -20,10 +20,12 @@ pub fn parse_datetime(s: &str) -> Result<OffsetDateTime> {
         }
         "this-year" => {
             let now = OffsetDateTime::now_local()?;
-            Ok(time::Date::from_calendar_date(now.year(), Month::January, 1)
-                .unwrap()
-                .with_time(Time::MIDNIGHT)
-                .assume_offset(now.offset()))
+            Ok(
+                time::Date::from_calendar_date(now.year(), Month::January, 1)
+                    .unwrap()
+                    .with_time(Time::MIDNIGHT)
+                    .assume_offset(now.offset()),
+            )
         }
         _ => parse_rfc3339_weak(s).map(Into::into).map_err(Into::into),
     }
