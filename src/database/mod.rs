@@ -134,6 +134,7 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
             pos = self
                 .backing
                 .seek(SeekFrom::Current(-(BUFFER_SIZE as i64)))?;
+            let chunk_start = pos;
             let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
             let n = self.backing.read(&mut buf)?;
             buf.truncate(n);
@@ -153,6 +154,9 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
                 let stream_position = self.backing.stream_position()?;
                 self.backing.set_len(stream_position)?;
                 return Ok(());
+            } else {
+                // no new line character found, go to the previous chunk
+                pos = self.backing.seek(SeekFrom::Start(chunk_start))?;
             }
         }
         Ok(())

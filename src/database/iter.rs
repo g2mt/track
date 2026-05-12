@@ -152,34 +152,43 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
         }
 
         let mut pos = self.tail_offset.unwrap();
+        assert_eq!(pos, self.backing.seek(SeekFrom::Current(0)).unwrap());
+        // eprintln!("pos={}", pos);
+
         while pos > 0 {
             pos = iter_try!(self.backing.seek(SeekFrom::Current(-(BUFFER_SIZE as i64))));
+            let chunk_start = pos;
             let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
             let n = iter_try!(self.backing.read(&mut buf));
             buf.truncate(n);
+            // eprintln!(
+            //     "read: {} {:?}",
+            //     pos,
+            //     String::from_utf8(buf.clone()).unwrap()
+            // );
 
-            let last_nl = buf
+            let last_nl: Option<u64> = buf
                 .iter()
                 .enumerate() // track byte indices
                 .rev() // iterate from end of buffer
                 .skip_while(|(_, b)| b.is_ascii_whitespace()) // skip trailing whitespace/newlines
                 .find(|(_, b)| **b == b'\n') // find the newline before the entry
-                .map(|(idx, _)| idx); // extract the index
+                .map(|(idx, _)| idx.try_into().unwrap()); // extract the index
 
             if let Some(last_nl) = last_nl {
+                let newline_pos = pos.checked_add(last_nl).unwrap();
+                // eprintln!("==> {}", newline_pos);
                 // Seek to after the new line character
-                iter_try!(self.backing.seek(SeekFrom::Start(
-                    pos + TryInto::<u64>::try_into(last_nl).unwrap() + 1
-                )));
+                iter_try!(self
+                    .backing
+                    .seek(SeekFrom::Start(newline_pos.checked_add(1).unwrap())));
 
                 // Scan the next line
                 let mut line = Vec::new();
                 let n = iter_try!(self.backing.read_until(b'\n', &mut line));
                 // Seek back to the end of the previous line after scanning,
                 // and set the seek position for the next iteration
-                self.tail_offset = Some(iter_try!(self.backing.seek(SeekFrom::Start(
-                    pos + TryInto::<u64>::try_into(last_nl).unwrap()
-                ))));
+                self.tail_offset = Some(iter_try!(self.backing.seek(SeekFrom::Start(newline_pos))));
                 if n == 0 {
                     return None;
                 }
@@ -194,6 +203,10 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
                 // In order to allow serde_json deserialization to return an error
                 // without ending the iterator, had_error setting is skipped here
                 return Some(serde_json::from_slice(&line).map_err(Into::into));
+            } else {
+                // no new line character found, go to the previous chunk
+                // eprintln!("going back to {}", chunk_start);
+                pos = iter_try!(self.backing.seek(SeekFrom::Start(chunk_start)));
             }
         }
 
