@@ -51,6 +51,6 @@ fn main() -> Result<()> {
     } else if let Some(category) = &args.category {
         track::track(category)
     } else {
-        unreachable!()
+        Err(anyhow::anyhow!("missing category for tracking"))
     }
 }
