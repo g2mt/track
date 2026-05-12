@@ -6,9 +6,9 @@ use clap::Parser;
 mod cli;
 use cli::Cli;
 
+mod database;
 use crate::database::Database;
 
-mod database;
 mod logs;
 mod time_utils;
 mod track;
@@ -57,6 +57,7 @@ fn main() -> Result<()> {
         db.write_info(&info)?;
         Ok(())
     } else {
-        track::track(&category)
+        let mut db = args.open_database(true)?;
+        track::track(db, &category)
     }
 }

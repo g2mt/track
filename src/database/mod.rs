@@ -3,7 +3,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 use anyhow::Result;
 
 pub mod schema;
-pub use schema::Info;
+pub use schema::{Entry, Info};
 
 #[cfg(test)]
 mod tests;
@@ -102,6 +102,14 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
             self.backing.write_all(&rest)?;
         }
 
+        Ok(())
+    }
+
+    pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
+        self.backing.seek(SeekFrom::End(0))?;
+        let json = serde_json::to_string(entry)?;
+        self.backing.write_all(json.as_bytes())?;
+        self.backing.write_all(b"\n")?;
         Ok(())
     }
 }

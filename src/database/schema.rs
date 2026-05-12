@@ -33,22 +33,8 @@ impl Info {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Entry<'info> {
-    pub(super) category: &'info str,
-    pub(super) start_time: u64,
-    pub(super) end_time: u64,
-}
-
-impl<'info> Entry<'info> {
-    pub fn category(&self) -> &'info str {
-        self.category
-    }
-
-    pub fn start_time(&self) -> u64 {
-        self.start_time
-    }
-
-    pub fn end_time(&self) -> u64 {
-        self.end_time
-    }
+pub struct Entry {
+    pub category: Arc<str>,
+    pub start_time: u64,
+    pub end_time: u64,
 }
