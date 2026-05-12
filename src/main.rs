@@ -18,21 +18,21 @@ fn main() -> Result<()> {
 
     if args.logs.today {
         let (from, to) = time_utils::today()?;
-        logs::show_logs(Some(from), Some(to))
+        return logs::show_logs(Some(from), Some(to));
     } else if args.logs.yesterday {
         let (from, to) = time_utils::yesterday()?;
-        logs::show_logs(Some(from), Some(to))
+        return logs::show_logs(Some(from), Some(to));
     } else if args.logs.this_week {
         let (from, to) = time_utils::this_week()?;
-        logs::show_logs(Some(from), Some(to))
+        return logs::show_logs(Some(from), Some(to));
     } else if args.logs.this_month {
         let (from, to) = time_utils::this_month()?;
-        logs::show_logs(Some(from), Some(to))
+        return logs::show_logs(Some(from), Some(to));
     } else if args.logs.this_year {
         let (from, to) = time_utils::this_year()?;
-        logs::show_logs(Some(from), Some(to))
+        return logs::show_logs(Some(from), Some(to));
     } else if args.from.is_some() || args.to.is_some() {
-        logs::show_logs(
+        return logs::show_logs(
             args.from
                 .as_deref()
                 .map(time_utils::parse_datetime)
@@ -41,16 +41,22 @@ fn main() -> Result<()> {
                 .as_deref()
                 .map(time_utils::parse_datetime)
                 .transpose()?,
-        )
-    } else if let Some(daily) = &args.daily {
+        );
+    }
+
+    let category = args
+        .category
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
+    if let Some(daily) = &args.daily {
         let daily = daily.parse::<humantime::Duration>()?;
         let mut db = args.open_database(true)?;
         let mut info = db.read_info()?;
+        info.goals_mut()
+            .insert(category.to_string(), daily.as_secs());
         println!("Set daily goal for to {}", daily);
         Ok(())
-    } else if let Some(category) = &args.category {
-        track::track(category)
     } else {
-        Err(anyhow::anyhow!("missing category for tracking"))
+        track::track(category)
     }
 }
