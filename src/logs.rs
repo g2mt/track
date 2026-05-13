@@ -11,17 +11,25 @@ pub struct LogArgs {
     pub db: Database<File>,
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
+    pub clean: bool,
 }
 
 pub fn show_logs(args: LogArgs) -> Result<()> {
-    let LogArgs { mut db, from, to } = args;
+    let LogArgs {
+        mut db,
+        from,
+        to,
+        clean,
+    } = args;
     let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
 
-    for entry in db.entries().rev() {
-        let entry = entry?;
+    let mut head_span = None;
+    let mut tail_span = None;
+    for res in db.entries().rev() {
+        let (span, entry) = res?;
 
         if let Some(from) = from_ts {
             if entry.start_time < from {
@@ -36,6 +44,9 @@ pub fn show_logs(args: LogArgs) -> Result<()> {
 
         let duration = entry.end_time - entry.start_time;
         *category_durations.entry(entry.category).or_insert(0) += duration;
+
+        tail_span = tail_span.or(Some(span));
+        head_span = Some(span);
     }
 
     let mut categories: Vec<(Arc<str>, u64)> = category_durations.into_iter().collect();
@@ -92,6 +103,13 @@ pub fn show_logs(args: LogArgs) -> Result<()> {
         anstyle::Reset,
         humantime::format_duration(total_d),
     );
+
+    // Cleaning prompt
+    if clean && tail_span.is_some() {
+        if todo!("ask user for deletion") {
+            db.remove_span(head_span, tail_span)?;
+        }
+    }
 
     Ok(())
 }

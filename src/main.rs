@@ -49,6 +49,7 @@ fn main() -> Result<()> {
             db: args.open_database(false)?,
             from: Some(from),
             to: None,
+            clean: false,
         });
     } else if args.logs.yesterday {
         let from = time_utils::yesterday()?;
@@ -56,6 +57,7 @@ fn main() -> Result<()> {
             db: args.open_database(false)?,
             from: Some(from),
             to: None,
+            clean: false,
         });
     } else if args.logs.this_week {
         let from = time_utils::this_week()?;
@@ -63,6 +65,7 @@ fn main() -> Result<()> {
             db: args.open_database(false)?,
             from: Some(from),
             to: None,
+            clean: false,
         });
     } else if args.logs.this_month {
         let from = time_utils::this_month()?;
@@ -70,6 +73,7 @@ fn main() -> Result<()> {
             db: args.open_database(false)?,
             from: Some(from),
             to: None,
+            clean: false,
         });
     } else if args.logs.this_year {
         let from = time_utils::this_year()?;
@@ -77,6 +81,7 @@ fn main() -> Result<()> {
             db: args.open_database(false)?,
             from: Some(from),
             to: None,
+            clean: false,
         });
     } else if args.from.is_some() || args.to.is_some() {
         log_args = Some(logs::LogArgs {
@@ -91,6 +96,7 @@ fn main() -> Result<()> {
                 .as_deref()
                 .map(time_utils::parse_datetime)
                 .transpose()?,
+            clean: false,
         });
     }
     if let Some(args) = log_args {

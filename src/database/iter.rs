@@ -3,7 +3,7 @@ use std::io::{BufRead, BufReader, Read, Seek, SeekFrom};
 use anyhow::Result;
 
 use super::Entry;
-use crate::database::BUFFER_SIZE;
+use crate::database::{BUFFER_SIZE, Span};
 
 #[derive(Debug, PartialEq)]
 enum Direction {
@@ -28,14 +28,6 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
             seek_dir: Direction::Forward,
             had_error: false,
         }
-    }
-
-    pub fn head_offset(&self) -> Option<u64> {
-        self.head_offset
-    }
-
-    pub fn tail_offset(&self) -> Option<u64> {
-        self.tail_offset
     }
 
     fn initial_seek_first_entry_offset(&mut self) -> Result<u64> {
@@ -75,7 +67,7 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
 }
 
 impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
-    type Item = Result<Entry>;
+    type Item = Result<(Span, Entry)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         macro_rules! iter_try {
@@ -132,7 +124,11 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
         }
         // In order to allow serde_json deserialization to return an error
         // without ending the iterator, had_error setting is skipped here
-        Some(serde_json::from_slice(&line).map_err(Into::into))
+        Some(
+            serde_json::from_slice(&line)
+                .map(|x| (Span::new(pos, self.head_offset.unwrap()), x))
+                .map_err(Into::into),
+        )
     }
 }
 
@@ -197,8 +193,9 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
             if let Some(last_nl) = last_nl {
                 let newline_pos = pos.checked_add(last_nl).unwrap();
                 // eprintln!("==> {}", newline_pos);
+
                 // Seek to after the new line character
-                iter_try!(
+                let pos = iter_try!(
                     self.backing
                         .seek(SeekFrom::Start(newline_pos.checked_add(1).unwrap()))
                 );
@@ -222,7 +219,11 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
                 }
                 // In order to allow serde_json deserialization to return an error
                 // without ending the iterator, had_error setting is skipped here
-                return Some(serde_json::from_slice(&line).map_err(Into::into));
+                return Some(
+                    serde_json::from_slice(&line)
+                        .map(|x| (Span::new(pos, pos + n as u64), x))
+                        .map_err(Into::into),
+                );
             } else {
                 // no new line character found, go to the previous chunk
                 // eprintln!("going back to {}", chunk_start);

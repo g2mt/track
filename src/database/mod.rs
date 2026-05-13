@@ -13,6 +13,26 @@ mod tests_entry;
 #[cfg(test)]
 mod tests_info;
 
+#[derive(Debug, Clone, Copy)]
+pub struct Span {
+    start: u64,
+    end: u64,
+}
+
+impl Span {
+    pub fn new(start: u64, end: u64) -> Self {
+        Self { start, end }
+    }
+
+    pub fn start(&self) -> u64 {
+        self.start
+    }
+
+    pub fn end(&self) -> u64 {
+        self.end
+    }
+}
+
 pub struct Database<Backing: Seek + Read> {
     backing: Backing,
 }
@@ -23,6 +43,25 @@ impl<Backing: Seek + Read> Database<Backing> {
     /// Creates a new `Database` wrapping the given backing storage.
     pub fn new(backing: Backing) -> Self {
         Self { backing }
+    }
+
+    fn end_of_info_pos(&mut self) -> Result<u64> {
+        self.backing.seek(SeekFrom::Start(0))?;
+
+        let mut res = 0u64;
+        let mut buf = [0u8; BUFFER_SIZE];
+        loop {
+            let n = self.backing.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            if let Some(pos) = buf[..n].iter().position(|&b| b == b'\n') {
+                res += pos as u64;
+                break;
+            }
+            res += n as u64;
+        }
+        Ok(res)
     }
 
     /// Reads the metadata header from the first line of the backing storage.
@@ -166,5 +205,31 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
             }
         }
         Ok(())
+    }
+
+    /// Removes the content in [start_span, end_span] from the backing, returning the number of
+    /// bytes removed. `None` represents unbounded (start of file / end of file).
+    pub fn remove_span(&mut self, start_span: Option<Span>, end_span: Option<Span>) -> Result<u64> {
+        let start = match start_span {
+            Some(s) => s.start(),
+            None => self.end_of_info_pos()? + 1, // skip the newline character
+        };
+        let end = match end_span {
+            Some(s) => s.end(),
+            None => self.backing.seek(SeekFrom::End(0))?,
+        };
+        let removed = end.checked_sub(start).unwrap();
+
+        self.backing.seek(SeekFrom::Start(end))?;
+        let mut rest = Vec::new();
+        self.backing.read_to_end(&mut rest)?;
+
+        self.backing.seek(SeekFrom::Start(start))?;
+        self.backing.write_all(&rest)?;
+
+        let new_len = start + rest.len() as u64;
+        self.backing.set_len(new_len)?;
+
+        Ok(removed)
     }
 }
