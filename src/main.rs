@@ -99,6 +99,7 @@ fn main() -> Result<()> {
             to: log_to,
             category_match: args.category_match()?,
             clean: args.clean,
+            align: args.logs.log_align.clone(),
         });
     }
 

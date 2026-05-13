@@ -144,4 +144,14 @@ pub struct Logs {
     /// Show this year's logs
     #[arg(long)]
     pub this_year: bool,
+
+    /// Align category lines in log output
+    #[arg(long = "log-align", default_value = "center")]
+    pub log_align: Align,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+pub enum Align {
+    Left,
+    Center,
 }

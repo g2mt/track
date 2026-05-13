@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use time::OffsetDateTime;
 
-use crate::args::CategoryMatch;
+use crate::args::{Align, CategoryMatch};
 use crate::cli;
 use crate::database::Database;
 use crate::heatmap::durations::HeatmapDurations;
@@ -16,6 +16,7 @@ pub struct Args {
     pub to: Option<OffsetDateTime>,
     pub category_match: Option<CategoryMatch>,
     pub clean: bool,
+    pub align: Align,
 }
 
 pub fn show_logs(args: Args) -> Result<()> {
@@ -25,6 +26,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         to,
         category_match,
         clean,
+        align,
     } = args;
     let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
@@ -68,7 +70,7 @@ pub fn show_logs(args: Args) -> Result<()> {
 
     let total: u64 = categories.iter().map(|(_, d)| d).sum();
 
-    let terminal_width = None;
+    let terminal_width = terminal_size::terminal_size().map(|(w, _)| w.0).unwrap_or(80);
 
     // Header: yellow FROM .. TO
     let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
@@ -83,45 +85,90 @@ pub fn show_logs(args: Args) -> Result<()> {
         .as_ref()
         .map(|dt| dt.format(&fmt).unwrap())
         .unwrap_or_else(|| "now".to_string());
-    println!(
-        "{}{}{} .. {}{}{}\n",
-        date_ansi,
-        from_str,
-        anstyle::Reset,
-        date_ansi,
-        to_str,
-        anstyle::Reset,
-    );
+    let header = format!("{} .. {}", from_str, to_str);
+    match align {
+        Align::Left => {
+            println!(
+                "{date_ansi}{}{reset} .. {date_ansi}{}{reset}\n",
+                from_str,
+                to_str,
+                date_ansi = date_ansi,
+                reset = anstyle::Reset,
+            );
+        }
+        Align::Center => {
+            let padding = (terminal_width as usize).saturating_sub(header.len()) / 2;
+            print!("{:padding$}", "", padding = padding);
+            println!(
+                "{date_ansi}{}{reset} .. {date_ansi}{}{reset}\n",
+                from_str,
+                to_str,
+                date_ansi = date_ansi,
+                reset = anstyle::Reset,
+            );
+        }
+    }
 
     // Category lines, sorted by duration descending
+    let dim = anstyle::Style::new()
+        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack)));
+    let bold = anstyle::Style::new().bold();
+    let reset = anstyle::Reset;
     for (category, duration) in &categories {
         let d = std::time::Duration::from_secs(*duration);
-        println!(
-            "  {}{}{} {}{}{}",
-            anstyle::Style::new().bold(),
-            category,
-            anstyle::Reset,
-            anstyle::Style::new()
-                .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack))),
-            humantime::format_duration(d),
-            anstyle::Reset,
-        );
+        let dur_str = humantime::format_duration(d).to_string();
+        match align {
+            Align::Left => {
+                println!(
+                    "  {bold}{category}{reset} {dim}{dur_str}{reset}",
+                    bold = bold,
+                    reset = reset,
+                    dim = dim,
+                );
+            }
+            Align::Center => {
+                let colon_pos = category.len() + 1;
+                let padding = (terminal_width as usize / 2).saturating_sub(colon_pos);
+                print!("{:padding$}", "", padding = padding);
+                println!(
+                    "{bold}{category}{reset} : {dim}{dur_str}{reset}",
+                    bold = bold,
+                    reset = reset,
+                    dim = dim,
+                );
+            }
+        }
     }
 
     // Total
     println!();
     let total_d = std::time::Duration::from_secs(total);
-    println!(
-        "{}Total time:{} {}",
-        anstyle::Style::new()
-            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
-            .bold(),
-        anstyle::Reset,
-        humantime::format_duration(total_d),
-    );
+    let total_str = humantime::format_duration(total_d).to_string();
+    let total_line = format!("Total time: {}", total_str);
+    let blue_bold = anstyle::Style::new()
+        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
+        .bold();
+    match align {
+        Align::Left => {
+            println!(
+                "{blue_bold}Total time:{reset} {total_str}",
+                blue_bold = blue_bold,
+                reset = anstyle::Reset,
+            );
+        }
+        Align::Center => {
+            let padding = (terminal_width as usize).saturating_sub(total_line.len()) / 2;
+            print!("{:padding$}", "", padding = padding);
+            println!(
+                "{blue_bold}Total time:{reset} {total_str}",
+                blue_bold = blue_bold,
+                reset = anstyle::Reset,
+            );
+        }
+    }
 
     // Heatmap
-    heatmap_durations.show(terminal_width);
+    heatmap_durations.show(Some(terminal_width));
 
     // Cleaning prompt
     if clean && tail_span.is_some() {
