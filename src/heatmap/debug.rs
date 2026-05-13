@@ -1,4 +1,4 @@
-use super::{show_heatmap, Args};
+use super::{Args, show_heatmap};
 
 /// Simple LCG PRNG
 struct Lcg {

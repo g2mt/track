@@ -38,7 +38,7 @@ enum HeatmapDurations {
 }
 
 const HOURLY_INTERVAL: u64 = 3600;
-const HOURLY_CALENDAR_MAX: u64 = 32*3600;
+const HOURLY_CALENDAR_MAX: u64 = 32 * 3600;
 const DAILY_INTERVAL: u64 = 86400;
 
 impl HeatmapDurations {
@@ -53,16 +53,16 @@ impl HeatmapDurations {
             let to_ts = to.unix_timestamp() as u64;
             let range_start = from_ts.map(|f| f - (f % HOURLY_INTERVAL)).unwrap_or(0);
             let range_end = to_ts - (to_ts % HOURLY_INTERVAL);
-            let n = ((range_end - range_start) / HOURLY_INTERVAL+ 1) as usize;
+            let n = ((range_end - range_start) / HOURLY_INTERVAL + 1) as usize;
             Self::Hourly {
                 buckets: vec![0; n],
                 range_start,
                 from,
             }
         } else {
-            let from_ts = from
-                .as_ref()
-                .map(|dt| dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL));
+            let from_ts = from.as_ref().map(|dt| {
+                dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL)
+            });
             Self::Monthly {
                 buckets: HashMap::new(),
                 from_ts,
@@ -74,11 +74,17 @@ impl HeatmapDurations {
 
     fn add_entry(&mut self, timestamp: u64, duration: u64) {
         match self {
-            Self::Hourly { buckets, range_start, .. } => {
+            Self::Hourly {
+                buckets,
+                range_start,
+                ..
+            } => {
                 let idx = ((timestamp.saturating_sub(*range_start)) / HOURLY_INTERVAL) as usize;
-                    buckets[idx] += duration;
+                buckets[idx] += duration;
             }
-            Self::Monthly { buckets, from_ts, .. } => {
+            Self::Monthly {
+                buckets, from_ts, ..
+            } => {
                 let day = timestamp - (timestamp % DAILY_INTERVAL);
                 let ref_day = from_ts.get_or_insert(day);
                 let offset = (day - *ref_day) / DAILY_INTERVAL;
@@ -89,11 +95,7 @@ impl HeatmapDurations {
 
     fn show(&self) {
         match self {
-            Self::Hourly {
-                buckets,
-                from,
-                ..
-            } => {
+            Self::Hourly { buckets, from, .. } => {
                 if buckets.is_empty() {
                     return;
                 }
@@ -145,9 +147,12 @@ impl HeatmapDurations {
 
                 let range_start = from
                     .as_ref()
-                    .map(|dt| dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL))
+                    .map(|dt| {
+                        dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL)
+                    })
                     .unwrap_or(min_day);
-                let range_end = to.unix_timestamp() as u64 - (to.unix_timestamp() as u64 % DAILY_INTERVAL);
+                let range_end =
+                    to.unix_timestamp() as u64 - (to.unix_timestamp() as u64 % DAILY_INTERVAL);
                 let n = ((range_end - range_start) / DAILY_INTERVAL + 1) as usize;
 
                 let max_secs = *buckets.values().max().unwrap_or(&1);
@@ -156,10 +161,7 @@ impl HeatmapDurations {
                     .map(|i| {
                         let day = range_start + (i as u64) * DAILY_INTERVAL;
                         let offset = (day - ref_day) / DAILY_INTERVAL;
-                        let secs = buckets
-                            .get(&DayOffset(offset as u64))
-                            .copied()
-                            .unwrap_or(0);
+                        let secs = buckets.get(&DayOffset(offset as u64)).copied().unwrap_or(0);
                         if max_secs > 0 {
                             ((secs as f64 / max_secs as f64) * 10.0).round() as u8
                         } else {
@@ -193,7 +195,8 @@ pub fn show_logs(args: Args) -> Result<()> {
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
-    let mut heatmap_durations = HeatmapDurations::new(from.clone(), to.unwrap_or_else(OffsetDateTime::now_utc));
+    let mut heatmap_durations =
+        HeatmapDurations::new(from.clone(), to.unwrap_or_else(OffsetDateTime::now_utc));
 
     let mut head_span = None;
     let mut tail_span = None;
