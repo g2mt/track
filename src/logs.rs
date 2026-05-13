@@ -2,14 +2,12 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::sync::Arc;
 
-use crate::heatmap;
-
 use anyhow::Result;
 use time::OffsetDateTime;
 
 use crate::args::CategoryMatch;
-use crate::cli;
 use crate::database::Database;
+use crate::{cli, heatmap};
 
 pub struct Args {
     pub db: Database<File>,

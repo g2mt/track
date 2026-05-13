@@ -19,7 +19,8 @@ pub fn set_daily_goal(args: &Args, category: Arc<str>, daily: &str) -> Result<()
     let duration = daily.parse::<humantime::Duration>()?;
     let mut db = args.open_database(true)?;
     let mut info = db.read_info()?.unwrap_or_default();
-    info.goals_mut().insert(category.clone(), duration.as_secs());
+    info.goals_mut()
+        .insert(category.clone(), duration.as_secs());
     let style =
         anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
     println!(

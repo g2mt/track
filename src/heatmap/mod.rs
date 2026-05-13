@@ -1,4 +1,4 @@
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
 use terminal_size::{Height, Width};
 
@@ -34,7 +34,9 @@ pub fn show_heatmap(args: Args) {
     let (Width(term_width), _) = terminal_size::terminal_size().unwrap_or((Width(80), Height(24)));
     let term_width = term_width as usize;
 
-    let cols = args.cols.unwrap_or_else(|| (args.buckets.len() + args.rows - 1) / args.rows);
+    let cols = args
+        .cols
+        .unwrap_or_else(|| (args.buckets.len() + args.rows - 1) / args.rows);
 
     // Pad buckets to fill the grid
     let padded_len = cols * args.rows;
@@ -48,7 +50,12 @@ pub fn show_heatmap(args: Args) {
         for col in 0..cols {
             let val = padded[col * args.rows + row];
             let style = color_for_value(val);
-            line.push_str(&format!("{}{}{}", style.render(), SQUARE, anstyle::Reset.render()));
+            line.push_str(&format!(
+                "{}{}{}",
+                style.render(),
+                SQUARE,
+                anstyle::Reset.render()
+            ));
         }
         let pad = term_width.saturating_sub(cols) / 2;
         println!("{:pad$}{}", "", line, pad = pad);

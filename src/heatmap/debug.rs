@@ -1,5 +1,4 @@
-use super::show_heatmap;
-use super::Args;
+use super::{Args, show_heatmap};
 
 /// Simple LCG PRNG
 struct Lcg {
@@ -12,7 +11,10 @@ impl Lcg {
     }
 
     fn next_u8(&mut self) -> u8 {
-        self.state = self.state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.state = self
+            .state
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         (self.state >> 33) as u8
     }
 }
