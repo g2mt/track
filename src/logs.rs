@@ -25,14 +25,12 @@ enum HeatmapDurations {
     /// Hourly durations with how much work is done per hour
     Hourly {
         buckets: Vec<u64>,
-        range_start: OffsetDateTime,
-        from: Option<OffsetDateTime>,
+        from: OffsetDateTime, // 0th minute of the starting time
     },
     /// Daily durations mapping the day offset to how much work is done on that day
     Daily {
         buckets: HashMap<DayOffset, u64>,
-        ref_day: Option<OffsetDateTime>,
-        from: Option<OffsetDateTime>,
+        from: OffsetDateTime, // midnight of the starting time, acts as reference day as well
         to: OffsetDateTime,
     },
 }
@@ -58,16 +56,14 @@ impl HeatmapDurations {
                 + 1;
             Self::Hourly {
                 buckets: vec![0; n],
-                range_start,
-                from,
+                from: range_start,
             }
         } else {
-            let ref_day = from
-                .as_ref()
-                .map(|dt| dt.replace_time(time::Time::MIDNIGHT));
+            let from = from
+                .map(|dt| dt.replace_time(time::Time::MIDNIGHT))
+                .unwrap_or_else(|| to.replace_time(time::Time::MIDNIGHT));
             Self::Daily {
                 buckets: HashMap::new(),
-                ref_day,
                 from,
                 to,
             }
@@ -78,19 +74,18 @@ impl HeatmapDurations {
         match self {
             Self::Hourly {
                 buckets,
-                range_start,
+                from,
                 ..
             } => {
                 let idx =
-                    ((timestamp - *range_start).whole_seconds() as u64 / HOURLY_INTERVAL) as usize;
+                    ((timestamp - *from).whole_seconds() as u64 / HOURLY_INTERVAL) as usize;
                 buckets[idx] += duration;
             }
             Self::Daily {
-                buckets, ref_day, ..
+                buckets, from, ..
             } => {
                 let day = timestamp.replace_time(time::Time::MIDNIGHT);
-                let ref_day = ref_day.get_or_insert(day);
-                let offset = (day - *ref_day).whole_days();
+                let offset = (day - *from).whole_days();
                 *buckets.entry(DayOffset(offset as u64)).or_insert(0) += duration;
             }
         }
@@ -98,7 +93,7 @@ impl HeatmapDurations {
 
     fn show(&self) {
         match self {
-            Self::Hourly { buckets, from, .. } => {
+            Self::Hourly { buckets, from } => {
                 if buckets.is_empty() {
                     return;
                 }
@@ -116,11 +111,7 @@ impl HeatmapDurations {
                     })
                     .collect();
 
-                let cols = if let Some(from) = from
-                    && from.hour() == 0
-                    && from.minute() == 0
-                    && from.second() == 0
-                {
+                let cols = if from.hour() == 0 && from.minute() == 0 && from.second() == 0 {
                     n.max(24)
                 } else {
                     n
@@ -134,7 +125,6 @@ impl HeatmapDurations {
             }
             Self::Daily {
                 buckets,
-                ref_day,
                 from,
                 to,
             } => {
@@ -142,15 +132,7 @@ impl HeatmapDurations {
                     return;
                 }
 
-                let ref_day = ref_day.unwrap();
-                let min_offset = buckets.keys().min().copied().unwrap_or(DayOffset(0));
-                let min_day =
-                    ref_day.saturating_add(time::Duration::days(min_offset.0 as i64));
-
-                let range_start = from
-                    .as_ref()
-                    .map(|dt| dt.replace_time(time::Time::MIDNIGHT))
-                    .unwrap_or(min_day);
+                let range_start = *from;
                 let range_end = to.replace_time(time::Time::MIDNIGHT);
                 let n = ((range_end - range_start).whole_days() as usize) + 1;
 
@@ -159,7 +141,7 @@ impl HeatmapDurations {
                 let intensity_buckets: Vec<u8> = (0..n)
                     .map(|i| {
                         let day = range_start.saturating_add(time::Duration::days(i as i64));
-                        let offset = (day - ref_day).whole_days();
+                        let offset = (day - *from).whole_days();
                         let secs = buckets.get(&DayOffset(offset as u64)).copied().unwrap_or(0);
                         if max_secs > 0 {
                             ((secs as f64 / max_secs as f64) * 10.0).round() as u8
