@@ -10,6 +10,7 @@ use time::OffsetDateTime;
 
 mod cli;
 mod database;
+mod goals;
 mod io_utils;
 mod logs;
 mod time_utils;
@@ -44,6 +45,10 @@ fn main() -> Result<()> {
             println!("{}", cat);
         }
         return Ok(());
+    }
+
+    if args.goals {
+        return goals::list_goals(args.open_database(false)?);
     }
 
     // Logging
@@ -89,23 +94,7 @@ fn main() -> Result<()> {
         .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
     if let Some(daily) = &args.daily {
-        let daily = daily.parse::<humantime::Duration>()?;
-        let mut db = args.open_database(true)?;
-        let mut info = db.read_info()?.unwrap_or_default();
-        info.goals_mut().insert(category.clone(), daily.as_secs());
-        let style =
-            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
-        println!(
-            "Set daily goal for {}{}{} to {}{}{}",
-            style,
-            category,
-            anstyle::Reset,
-            style,
-            daily,
-            anstyle::Reset
-        );
-        db.write_info(&info)?;
-        Ok(())
+        return goals::set_daily_goal(&args, category, daily);
     } else if args.remove_category {
         let cm = args.category_match()?.unwrap();
         let mut db = args.open_database(true)?;

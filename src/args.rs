@@ -34,6 +34,10 @@ pub struct Args {
     #[arg(long)]
     pub categories: bool,
 
+    /// List all goals with human-readable durations
+    #[arg(short = 'g', long)]
+    pub goals: bool,
+
     /// Set daily goal for a project (e.g. "1h")
     #[arg(long)]
     pub daily: Option<String>,

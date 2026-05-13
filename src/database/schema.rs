@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
@@ -7,16 +7,16 @@ use crate::args::CategoryMatch;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Info {
-    pub(super) goals: HashMap<Arc<str>, u64>,
+    pub(super) goals: BTreeMap<Arc<str>, u64>, // BTreeMap to ensure categories are sorted alphabetically
     pub(super) categories: Vec<Arc<str>>,
 }
 
 impl Info {
-    pub fn goals(&self) -> &HashMap<Arc<str>, u64> {
+    pub fn goals(&self) -> &BTreeMap<Arc<str>, u64> {
         &self.goals
     }
 
-    pub fn goals_mut(&mut self) -> &mut HashMap<Arc<str>, u64> {
+    pub fn goals_mut(&mut self) -> &mut BTreeMap<Arc<str>, u64> {
         &mut self.goals
     }
 
