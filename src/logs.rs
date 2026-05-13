@@ -17,6 +17,170 @@ pub struct Args {
     pub clean: bool,
 }
 
+/// Number of days since the starting day in *from*
+#[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
+struct DayOffset(u64);
+
+enum HeatmapDurations {
+    /// Hourly durations with how much work is done per hour
+    Hourly {
+        buckets: Vec<u64>,
+        range_start: u64,
+        from: Option<OffsetDateTime>,
+    },
+    /// Daily durations mapping the day offset to how much work is done on that day
+    Monthly {
+        buckets: HashMap<DayOffset, u64>,
+        from_ts: Option<u64>,
+        from: Option<OffsetDateTime>,
+        to: OffsetDateTime,
+    },
+}
+
+const HOURLY_INTERVAL: u64 = 3600;
+const HOURLY_CALENDAR_MAX: u64 = 32*3600;
+const DAILY_INTERVAL: u64 = 86400;
+
+impl HeatmapDurations {
+    fn new(from: Option<OffsetDateTime>, to: OffsetDateTime) -> Self {
+        let use_hourly = from.as_ref().map_or(false, |f| {
+            let diff = to - *f;
+            diff.whole_seconds() as u64 <= HOURLY_CALENDAR_MAX
+        });
+
+        if use_hourly {
+            let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
+            let to_ts = to.unix_timestamp() as u64;
+            let range_start = from_ts.map(|f| f - (f % HOURLY_INTERVAL)).unwrap_or(0);
+            let range_end = to_ts - (to_ts % HOURLY_INTERVAL);
+            let n = ((range_end - range_start) / HOURLY_INTERVAL+ 1) as usize;
+            Self::Hourly {
+                buckets: vec![0; n],
+                range_start,
+                from,
+            }
+        } else {
+            let from_ts = from
+                .as_ref()
+                .map(|dt| dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL));
+            Self::Monthly {
+                buckets: HashMap::new(),
+                from_ts,
+                from,
+                to,
+            }
+        }
+    }
+
+    fn add_entry(&mut self, timestamp: u64, duration: u64) {
+        match self {
+            Self::Hourly { buckets, range_start, .. } => {
+                let idx = ((timestamp.saturating_sub(*range_start)) / HOURLY_INTERVAL) as usize;
+                    buckets[idx] += duration;
+            }
+            Self::Monthly { buckets, from_ts, .. } => {
+                let day = timestamp - (timestamp % DAILY_INTERVAL);
+                let ref_day = from_ts.get_or_insert(day);
+                let offset = (day - *ref_day) / DAILY_INTERVAL;
+                *buckets.entry(DayOffset(offset as u64)).or_insert(0) += duration;
+            }
+        }
+    }
+
+    fn show(&self) {
+        match self {
+            Self::Hourly {
+                buckets,
+                from,
+                ..
+            } => {
+                if buckets.is_empty() {
+                    return;
+                }
+                let n = buckets.len();
+                let max_secs = *buckets.iter().max().unwrap_or(&1);
+
+                let intensity_buckets: Vec<u8> = buckets
+                    .iter()
+                    .map(|&secs| {
+                        if max_secs > 0 {
+                            ((secs as f64 / max_secs as f64) * 10.0).round() as u8
+                        } else {
+                            0
+                        }
+                    })
+                    .collect();
+
+                let cols = if let Some(from) = from
+                    && from.hour() == 0
+                    && from.minute() == 0
+                    && from.second() == 0
+                {
+                    n.max(24)
+                } else {
+                    n
+                };
+
+                heatmap::show_heatmap(heatmap::Args {
+                    buckets: intensity_buckets,
+                    rows: 1,
+                    cols,
+                });
+            }
+            Self::Monthly {
+                buckets,
+                from_ts,
+                from,
+                to,
+            } => {
+                if buckets.is_empty() {
+                    return;
+                }
+
+                let ref_day = from_ts.unwrap_or(0);
+                let min_offset = buckets.keys().min().copied().unwrap_or(DayOffset(0));
+                let max_offset = buckets.keys().max().copied().unwrap_or(DayOffset(0));
+                let min_day = ref_day + min_offset.0 * DAILY_INTERVAL;
+                let max_day = ref_day + max_offset.0 * DAILY_INTERVAL;
+
+                let range_start = from
+                    .as_ref()
+                    .map(|dt| dt.unix_timestamp() as u64 - (dt.unix_timestamp() as u64 % DAILY_INTERVAL))
+                    .unwrap_or(min_day);
+                let range_end = to.unix_timestamp() as u64 - (to.unix_timestamp() as u64 % DAILY_INTERVAL);
+                let n = ((range_end - range_start) / DAILY_INTERVAL + 1) as usize;
+
+                let max_secs = *buckets.values().max().unwrap_or(&1);
+
+                let intensity_buckets: Vec<u8> = (0..n)
+                    .map(|i| {
+                        let day = range_start + (i as u64) * DAILY_INTERVAL;
+                        let offset = (day - ref_day) / DAILY_INTERVAL;
+                        let secs = buckets
+                            .get(&DayOffset(offset as u64))
+                            .copied()
+                            .unwrap_or(0);
+                        if max_secs > 0 {
+                            ((secs as f64 / max_secs as f64) * 10.0).round() as u8
+                        } else {
+                            0
+                        }
+                    })
+                    .collect();
+
+                let cols = 14;
+                let rows = (n + cols - 1) / cols;
+
+                heatmap::show_heatmap(heatmap::Args {
+                    buckets: intensity_buckets,
+                    rows,
+                    cols,
+                });
+            }
+        }
+    }
+}
+
 pub fn show_logs(args: Args) -> Result<()> {
     let Args {
         mut db,
@@ -28,14 +192,8 @@ pub fn show_logs(args: Args) -> Result<()> {
     let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 
-    // Hourly format only when `from` is set and range ≤ 32 hours
-    let use_hourly = from_ts.map_or(false, |f| {
-        let end = to_ts.unwrap_or_else(|| OffsetDateTime::now_utc().unix_timestamp() as u64);
-        end.saturating_sub(f) <= 32 * 3600
-    });
-
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
-    let mut heatmap_durations: HashMap<u64, u64> = HashMap::new();
+    let mut heatmap_durations = HeatmapDurations::new(from.clone(), to.unwrap_or_else(OffsetDateTime::now_utc));
 
     let mut head_span = None;
     let mut tail_span = None;
@@ -61,12 +219,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         let duration = entry.end_time - entry.start_time;
         *category_durations.entry(entry.category).or_insert(0) += duration;
 
-        let bucket = if use_hourly {
-            entry.start_time - (entry.start_time % 3600)
-        } else {
-            entry.start_time - (entry.start_time % 86400)
-        };
-        *heatmap_durations.entry(bucket).or_insert(0) += duration;
+        heatmap_durations.add_entry(entry.start_time, duration);
 
         tail_span = tail_span.or(Some(span));
         head_span = Some(span);
@@ -128,53 +281,7 @@ pub fn show_logs(args: Args) -> Result<()> {
     );
 
     // Heatmap
-    if !heatmap_durations.is_empty() {
-        let min_key = *heatmap_durations.keys().min().unwrap();
-        let max_key = *heatmap_durations.keys().max().unwrap();
-        let interval = if use_hourly { 3600u64 } else { 86400u64 };
-        let range_start = from_ts.map(|f| f - (f % interval)).unwrap_or(min_key);
-        let range_end = to_ts.map(|t| t - (t % interval)).unwrap_or(max_key);
-        let n = ((range_end - range_start) / interval + 1) as usize;
-
-        let max_secs = *heatmap_durations.values().max().unwrap_or(&1);
-
-        let mut buckets = Vec::with_capacity(n);
-        for i in 0..n {
-            let key = range_start + (i as u64) * interval;
-            let secs = heatmap_durations.get(&key).copied().unwrap_or(0);
-            let intensity = if max_secs > 0 {
-                ((secs as f64 / max_secs as f64) * 10.0).round() as u8
-            } else {
-                0
-            };
-            buckets.push(intensity);
-        }
-
-        if use_hourly {
-            let cols = if let Some(from) = from
-                && from.hour() == 0
-                && from.minute() == 0
-                && from.second() == 0
-            {
-                n.max(24)
-            } else {
-                n
-            };
-            heatmap::show_heatmap(heatmap::Args {
-                buckets,
-                rows: 1,
-                cols,
-            });
-        } else {
-            let cols = 14;
-            let rows = (n + cols - 1) / cols;
-            heatmap::show_heatmap(heatmap::Args {
-                buckets,
-                rows,
-                cols,
-            });
-        }
-    }
+    heatmap_durations.show();
 
     // Cleaning prompt
     if clean && tail_span.is_some() {
