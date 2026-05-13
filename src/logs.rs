@@ -8,15 +8,15 @@ use time::OffsetDateTime;
 use crate::cli;
 use crate::database::Database;
 
-pub struct LogArgs {
+pub struct Args {
     pub db: Database<File>,
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub clean: bool,
 }
 
-pub fn show_logs(args: LogArgs) -> Result<()> {
-    let LogArgs {
+pub fn show_logs(args: Args) -> Result<()> {
+    let Args {
         mut db,
         from,
         to,

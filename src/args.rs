@@ -36,6 +36,10 @@ pub struct Args {
     /// Category name
     pub category: Option<Arc<str>>,
 
+    /// Clean mode (delete logs/records instead of showing)
+    #[arg(long)]
+    pub clean: bool,
+
     /// Generate shell completion scripts
     #[arg(long, value_enum)]
     pub completion: Option<Shell>,

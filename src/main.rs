@@ -4,6 +4,7 @@ use clap_complete::generate;
 
 mod args;
 use args::Args;
+use time::OffsetDateTime;
 
 mod cli;
 mod database;
@@ -43,65 +44,37 @@ fn main() -> Result<()> {
 
     // Logging
 
-    let mut log_args: Option<logs::LogArgs> = None;
+    let mut log_from: Option<OffsetDateTime> = None;
+    let mut log_to: Option<OffsetDateTime> = None;
     if args.logs.today {
-        let from = time_utils::today()?;
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: Some(from),
-            to: None,
-            clean: false,
-        });
+        log_from = Some(time_utils::today()?);
     } else if args.logs.yesterday {
-        let from = time_utils::yesterday()?;
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: Some(from),
-            to: None,
-            clean: false,
-        });
+        log_from = Some(time_utils::yesterday()?);
     } else if args.logs.this_week {
-        let from = time_utils::this_week()?;
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: Some(from),
-            to: None,
-            clean: false,
-        });
+        log_from = Some(time_utils::this_week()?);
     } else if args.logs.this_month {
-        let from = time_utils::this_month()?;
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: Some(from),
-            to: None,
-            clean: false,
-        });
+        log_from = Some(time_utils::this_month()?);
     } else if args.logs.this_year {
-        let from = time_utils::this_year()?;
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: Some(from),
-            to: None,
-            clean: false,
-        });
+        log_from = Some(time_utils::this_year()?);
     } else if args.from.is_some() || args.to.is_some() {
-        log_args = Some(logs::LogArgs {
-            db: args.open_database(false)?,
-            from: args
-                .from
-                .as_deref()
-                .map(time_utils::parse_datetime)
-                .transpose()?,
-            to: args
-                .to
-                .as_deref()
-                .map(time_utils::parse_datetime)
-                .transpose()?,
-            clean: false,
-        });
+        log_from = args
+            .from
+            .as_deref()
+            .map(time_utils::parse_datetime)
+            .transpose()?;
+        log_to = args
+            .to
+            .as_deref()
+            .map(time_utils::parse_datetime)
+            .transpose()?;
     }
-    if let Some(args) = log_args {
-        return logs::show_logs(args);
+    if log_from.is_some() || log_to.is_some() {
+        return logs::show_logs(logs::Args {
+            db: args.open_database(args.clean)?, // clean requires write permissions
+            from: log_from,
+            to: log_to,
+            clean: args.clean,
+        });
     }
 
     // Category manipulation
