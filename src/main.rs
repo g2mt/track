@@ -1,3 +1,5 @@
+use std::io::IsTerminal;
+
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
@@ -20,14 +22,16 @@ fn main() -> Result<()> {
         let mut cmd = Args::command();
         let bin_name = cmd.get_name().to_string();
         generate(shell, &mut cmd, &bin_name, &mut std::io::stdout());
-        let style =
-            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
-        eprintln!(
-            "{style}Hint: use '{bin} --completion {shell} > ~/.config/{shell}/completions/{bin}.{shell}' to generate completions for current user{reset}",
-            style = style.render(),
-            bin = bin_name,
-            reset = anstyle::Reset.render()
-        );
+        if std::io::stdout().is_terminal() {
+            let style = anstyle::Style::new()
+                .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+            eprintln!(
+                "{style}Hint: use '{bin} --completion {shell} > ~/.config/{shell}/completions/{bin}.{shell}' to generate completions for current user{reset}",
+                style = style.render(),
+                bin = bin_name,
+                reset = anstyle::Reset.render()
+            );
+        }
         return Ok(());
     }
 
@@ -89,7 +93,17 @@ fn main() -> Result<()> {
         let mut db = args.open_database(true)?;
         let mut info = db.read_info()?.unwrap_or_default();
         info.goals_mut().insert(category.clone(), daily.as_secs());
-        println!("Set daily goal for {} to {}", category, daily);
+        let style =
+            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+        println!(
+            "Set daily goal for {}{}{} to {}{}{}",
+            style,
+            category,
+            anstyle::Reset,
+            style,
+            daily,
+            anstyle::Reset
+        );
         db.write_info(&info)?;
         Ok(())
     } else if args.remove_category {
@@ -98,9 +112,17 @@ fn main() -> Result<()> {
         let mut info = db.read_info()?.unwrap_or_default();
         let removed = info.remove_categories(&cm);
         if removed.is_empty() {
-            println!("Category not found: {}", category);
+            return Err(anyhow::anyhow!("Category not found: {}", category));
         } else {
-            println!("Removed categories:");
+            if std::io::stdout().is_terminal() {
+                println!(
+                    "{}Removed categories from metadata:{}",
+                    anstyle::Style::new()
+                        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
+                        .bold(),
+                    anstyle::Reset,
+                );
+            }
             for cat in &removed {
                 println!("{}", cat);
             }
