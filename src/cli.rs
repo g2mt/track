@@ -14,6 +14,10 @@ pub struct Cli {
     #[arg(short = 'f', long = "file")]
     pub file: Option<String>,
 
+    /// Print all category names line by line then exit
+    #[arg(long)]
+    pub categories: bool,
+
     /// Set daily goal for a project (e.g. "1h")
     #[arg(long)]
     pub daily: Option<String>,

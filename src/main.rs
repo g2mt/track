@@ -13,6 +13,15 @@ mod track;
 fn main() -> Result<()> {
     let args = Cli::parse();
 
+    if args.categories {
+        let mut db = args.open_database(false)?;
+        let info = db.read_info()?.unwrap_or_default();
+        for cat in info.categories() {
+            println!("{}", cat);
+        }
+        return Ok(());
+    }
+
     if args.logs.today {
         let (from, to) = time_utils::today()?;
         let mut db = args.open_database(false)?;
