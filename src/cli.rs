@@ -34,7 +34,7 @@ pub struct Cli {
     #[arg(long = "to", conflicts_with = "dated_log")]
     pub to: Option<String>,
 
-    /// Project name
+    /// Category name
     pub category: Option<Arc<str>>,
 
     /// Generate shell completion scripts
