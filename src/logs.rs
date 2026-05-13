@@ -41,21 +41,22 @@ pub fn show_logs(
     let total: u64 = categories.iter().map(|(_, d)| d).sum();
 
     // Header: yellow FROM .. TO
-    if let (Some(from_dt), Some(to_dt)) = (from, to) {
-        let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
-            .expect("valid format description");
-        let date_ansi =
-            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
-        println!(
-            "{}{}{} .. {}{}{}\n",
-            date_ansi,
-            from_dt.format(&fmt).unwrap(),
-            anstyle::Reset,
-            date_ansi,
-            to_dt.format(&fmt).unwrap(),
-            anstyle::Reset,
-        );
-    }
+    let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
+        .expect("valid format description");
+    let date_ansi =
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+    let from_str = from
+        .as_ref()
+        .map(|dt| dt.format(&fmt).unwrap())
+        .unwrap_or_else(|| "beginning".to_string());
+    let to_str = to
+        .as_ref()
+        .map(|dt| dt.format(&fmt).unwrap())
+        .unwrap_or_else(|| "now".to_string());
+    println!(
+        "{}{}{} .. {}{}{}\n",
+        date_ansi, from_str, anstyle::Reset, date_ansi, to_str, anstyle::Reset,
+    );
 
     // Category lines, sorted by duration descending
     for (category, duration) in &categories {

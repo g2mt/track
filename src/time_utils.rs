@@ -31,49 +31,36 @@ pub fn parse_datetime(s: &str) -> Result<OffsetDateTime> {
     }
 }
 
-pub fn today() -> Result<(OffsetDateTime, OffsetDateTime)> {
+pub fn today() -> Result<OffsetDateTime> {
     let now = OffsetDateTime::now_local()?;
     let start = now.replace_time(Time::MIDNIGHT);
-    Ok((start, start + Duration::DAY))
+    Ok(start)
 }
 
-pub fn yesterday() -> Result<(OffsetDateTime, OffsetDateTime)> {
+pub fn yesterday() -> Result<OffsetDateTime> {
     let now = OffsetDateTime::now_local()?;
     let today_start = now.replace_time(Time::MIDNIGHT);
-    Ok((today_start - Duration::DAY, today_start))
+    Ok(today_start - Duration::DAY)
 }
 
-pub fn this_week() -> Result<(OffsetDateTime, OffsetDateTime)> {
+pub fn this_week() -> Result<OffsetDateTime> {
     let now = OffsetDateTime::now_local()?;
     let week_start = now.replace_time(Time::MIDNIGHT)
         - Duration::days(now.weekday().number_from_monday() as i64 - 1);
-    Ok((week_start, week_start + Duration::days(7)))
+    Ok(week_start)
 }
 
-pub fn this_month() -> Result<(OffsetDateTime, OffsetDateTime)> {
+pub fn this_month() -> Result<OffsetDateTime> {
     let now = OffsetDateTime::now_local()?;
     let from = now.replace_day(1).unwrap().replace_time(Time::MIDNIGHT);
-    let (next_month, next_year) = if now.month() == Month::December {
-        (Month::January, now.year() + 1)
-    } else {
-        (now.month().next(), now.year())
-    };
-    let to = time::Date::from_calendar_date(next_year, next_month, 1)
-        .unwrap()
-        .with_time(Time::MIDNIGHT)
-        .assume_offset(now.offset());
-    Ok((from, to))
+    Ok(from)
 }
 
-pub fn this_year() -> Result<(OffsetDateTime, OffsetDateTime)> {
+pub fn this_year() -> Result<OffsetDateTime> {
     let now = OffsetDateTime::now_local()?;
     let from = time::Date::from_calendar_date(now.year(), Month::January, 1)
         .unwrap()
         .with_time(Time::MIDNIGHT)
         .assume_offset(now.offset());
-    let to = time::Date::from_calendar_date(now.year() + 1, Month::January, 1)
-        .unwrap()
-        .with_time(Time::MIDNIGHT)
-        .assume_offset(now.offset());
-    Ok((from, to))
+    Ok(from)
 }
