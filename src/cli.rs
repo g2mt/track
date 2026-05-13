@@ -39,7 +39,7 @@ pub struct Cli {
 
     /// Generate shell completion scripts
     #[arg(long, value_enum)]
-    pub completions: Option<Shell>,
+    pub completion: Option<Shell>,
 }
 
 impl Cli {
