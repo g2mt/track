@@ -5,6 +5,7 @@ use clap_complete::generate;
 mod args;
 use args::Args;
 
+mod cli;
 mod database;
 mod io_utils;
 mod logs;

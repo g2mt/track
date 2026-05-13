@@ -5,6 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use time::OffsetDateTime;
 
+use crate::cli;
 use crate::database::Database;
 
 pub struct LogArgs {
@@ -106,7 +107,7 @@ pub fn show_logs(args: LogArgs) -> Result<()> {
 
     // Cleaning prompt
     if clean && tail_span.is_some() {
-        if todo!("ask user for deletion") {
+        if cli::confirm("Delete these entries?") {
             db.remove_span(head_span, tail_span)?;
         }
     }
