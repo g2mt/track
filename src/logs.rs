@@ -55,7 +55,12 @@ pub fn show_logs(
         .unwrap_or_else(|| "now".to_string());
     println!(
         "{}{}{} .. {}{}{}\n",
-        date_ansi, from_str, anstyle::Reset, date_ansi, to_str, anstyle::Reset,
+        date_ansi,
+        from_str,
+        anstyle::Reset,
+        date_ansi,
+        to_str,
+        anstyle::Reset,
     );
 
     // Category lines, sorted by duration descending
