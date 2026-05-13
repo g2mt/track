@@ -14,6 +14,8 @@ pub struct Args {
     pub rows: usize,
     /// Number of columns (computed as ceil(buckets / rows) if not provided)
     pub cols: usize,
+    /// Terminal width to use for centering (None = auto-detect)
+    pub terminal_width: Option<u16>,
 }
 
 fn color_for_value(val: Option<u8>) -> anstyle::Style {
@@ -36,8 +38,14 @@ pub fn show_heatmap(args: Args) {
         return;
     }
 
-    let (Width(term_width), _) = terminal_size::terminal_size().unwrap_or((Width(80), Height(24)));
-    let term_width = term_width as usize;
+    let term_width = args
+        .terminal_width
+        .map(|w| w as usize)
+        .unwrap_or_else(|| {
+            terminal_size::terminal_size()
+                .map(|(Width(w), _)| w as usize)
+                .unwrap_or(80)
+        });
 
     let cols = args.cols;
 

@@ -67,7 +67,7 @@ impl HeatmapDurations {
         }
     }
 
-    pub fn show(&self) {
+    pub fn show(&self, terminal_width: Option<u16>) {
         match self {
             Self::Hourly { buckets, from } => {
                 if buckets.is_empty() {
@@ -97,6 +97,7 @@ impl HeatmapDurations {
                     buckets: intensity_buckets,
                     rows: 1,
                     cols,
+                    terminal_width,
                 });
             }
             Self::Daily { buckets, .. } => {
@@ -119,6 +120,7 @@ impl HeatmapDurations {
                     buckets: intensity_buckets,
                     rows,
                     cols: DAILY_COLS,
+                    terminal_width,
                 });
             }
         }

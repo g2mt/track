@@ -6,9 +6,9 @@ use anyhow::Result;
 use time::OffsetDateTime;
 
 use crate::args::CategoryMatch;
+use crate::cli;
 use crate::database::Database;
 use crate::heatmap::durations::HeatmapDurations;
-use crate::cli;
 
 pub struct Args {
     pub db: Database<File>,
@@ -68,6 +68,8 @@ pub fn show_logs(args: Args) -> Result<()> {
 
     let total: u64 = categories.iter().map(|(_, d)| d).sum();
 
+    let terminal_width = None;
+
     // Header: yellow FROM .. TO
     let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
         .expect("valid format description");
@@ -119,7 +121,7 @@ pub fn show_logs(args: Args) -> Result<()> {
     );
 
     // Heatmap
-    heatmap_durations.show();
+    heatmap_durations.show(terminal_width);
 
     // Cleaning prompt
     if clean && tail_span.is_some() {

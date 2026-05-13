@@ -30,5 +30,6 @@ pub fn show_debug_heatmap(rows: usize, cols: usize) {
         buckets,
         rows,
         cols,
+        terminal_width: None,
     });
 }
