@@ -1,4 +1,4 @@
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use terminal_size::{Height, Width};
 
@@ -15,13 +15,17 @@ pub struct Args {
     pub cols: usize,
 }
 
-fn color_for_value(val: u8) -> anstyle::Style {
-    let ansi = match val {
-        0 => anstyle::AnsiColor::BrightBlack,
-        1..=3 => anstyle::AnsiColor::Green,
-        4..=6 => anstyle::AnsiColor::BrightGreen,
-        7..=9 => anstyle::AnsiColor::Yellow,
-        _ => anstyle::AnsiColor::Cyan,
+fn color_for_value(val: Option<u8>) -> anstyle::Style {
+    let ansi = if let Some(val) = val {
+        match val {
+            0 => anstyle::AnsiColor::BrightBlack,
+            1..=3 => anstyle::AnsiColor::Green,
+            4..=6 => anstyle::AnsiColor::BrightGreen,
+            7..=9 => anstyle::AnsiColor::Yellow,
+            _ => anstyle::AnsiColor::Cyan,
+        }
+    } else {
+        anstyle::AnsiColor::Black
     };
     anstyle::Style::new().fg_color(Some(ansi.into()))
 }
@@ -36,17 +40,12 @@ pub fn show_heatmap(args: Args) {
 
     let cols = args.cols;
 
-    // Pad buckets to fill the grid
-    let padded_len = cols * args.rows;
-    let mut padded = args.buckets;
-    padded.resize(padded_len, 0);
-
     println!(); // leading newline
 
     for row in 0..args.rows {
         let mut line = String::with_capacity(cols);
         for col in 0..cols {
-            let val = padded[col * args.rows + row];
+            let val = args.buckets.get(row * args.cols + col).copied();
             let style = color_for_value(val);
             line.push_str(&format!(
                 "{}{}{}",

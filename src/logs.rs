@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::sync::Arc;
 
@@ -29,61 +29,50 @@ enum HeatmapDurations {
     },
     /// Daily durations mapping the day offset to how much work is done on that day
     Daily {
-        buckets: HashMap<DayOffset, u64>,
+        buckets: BTreeMap<DayOffset, u64>,
         from: OffsetDateTime, // midnight of the starting time, acts as reference day as well
-        to: OffsetDateTime,
     },
 }
 
-const HOURLY_INTERVAL: u64 = 3600;
 const HOURLY_CALENDAR_MAX: u64 = 32 * 3600;
-
+const DAILY_COLS: usize = 14;
 
 impl HeatmapDurations {
-    fn new(from: Option<OffsetDateTime>, to: OffsetDateTime) -> Self {
+    fn new(from: Option<OffsetDateTime>, to: Option<OffsetDateTime>) -> Self {
+        let to = to.unwrap_or_else(OffsetDateTime::now_utc);
         let use_hourly = from.as_ref().map_or(false, |f| {
             let diff = to - *f;
             diff.whole_seconds() as u64 <= HOURLY_CALENDAR_MAX
         });
 
         if use_hourly {
-            let f = from.clone().unwrap();
-            let range_start =
-                f.replace_time(time::Time::from_hms(f.hour(), 0, 0).unwrap());
-            let range_end =
-                to.replace_time(time::Time::from_hms(to.hour(), 0, 0).unwrap());
-            let n = ((range_end - range_start).whole_seconds() as usize / HOURLY_INTERVAL as usize)
-                + 1;
+            let to = to.replace_time(time::Time::from_hms(to.hour(), 0, 0).unwrap());
+            let from = if let Some(from) = from {
+                from.replace_time(time::Time::from_hms(from.hour(), 0, 0).unwrap())
+            } else {
+                to - time::Duration::hours(24)
+            };
+            let n = (to - from).whole_hours();
             Self::Hourly {
-                buckets: vec![0; n],
-                from: range_start,
+                buckets: vec![0; n.try_into().unwrap()],
+                from,
             }
         } else {
-            let from = from
-                .map(|dt| dt.replace_time(time::Time::MIDNIGHT))
-                .unwrap_or_else(|| to.replace_time(time::Time::MIDNIGHT));
+            let from = from.unwrap_or_else(|| to - time::Duration::days(14));
             Self::Daily {
-                buckets: HashMap::new(),
+                buckets: BTreeMap::new(),
                 from,
-                to,
             }
         }
     }
 
     fn add_entry(&mut self, timestamp: OffsetDateTime, duration: u64) {
         match self {
-            Self::Hourly {
-                buckets,
-                from,
-                ..
-            } => {
-                let idx =
-                    ((timestamp - *from).whole_seconds() as u64 / HOURLY_INTERVAL) as usize;
+            Self::Hourly { buckets, from, .. } => {
+                let idx: usize = (timestamp - *from).whole_hours().try_into().unwrap();
                 buckets[idx] += duration;
             }
-            Self::Daily {
-                buckets, from, ..
-            } => {
+            Self::Daily { buckets, from, .. } => {
                 let day = timestamp.replace_time(time::Time::MIDNIGHT);
                 let offset = (day - *from).whole_days();
                 *buckets.entry(DayOffset(offset as u64)).or_insert(0) += duration;
@@ -123,41 +112,26 @@ impl HeatmapDurations {
                     cols,
                 });
             }
-            Self::Daily {
-                buckets,
-                from,
-                to,
-            } => {
+            Self::Daily { buckets, .. } => {
                 if buckets.is_empty() {
                     return;
                 }
 
-                let range_start = *from;
-                let range_end = to.replace_time(time::Time::MIDNIGHT);
-                let n = ((range_end - range_start).whole_days() as usize) + 1;
+                let n_days = (buckets.last_key_value().unwrap().0).0 + 1;
+                let max_duration: u64 = buckets.values().sum();
 
-                let max_secs = *buckets.values().max().unwrap_or(&1);
-
-                let intensity_buckets: Vec<u8> = (0..n)
-                    .map(|i| {
-                        let day = range_start.saturating_add(time::Duration::days(i as i64));
-                        let offset = (day - *from).whole_days();
-                        let secs = buckets.get(&DayOffset(offset as u64)).copied().unwrap_or(0);
-                        if max_secs > 0 {
-                            ((secs as f64 / max_secs as f64) * 10.0).round() as u8
-                        } else {
-                            0
-                        }
-                    })
-                    .collect();
-
-                let cols = 14;
-                let rows = (n + cols - 1) / cols;
+                let rows = (n_days as usize).div_ceil(DAILY_COLS);
+                let mut intensity_buckets = vec![0; n_days as usize];
+                for (offset, duration) in buckets.iter() {
+                    let intensity =
+                        (((*duration as f64) / (max_duration as f64)) * 10.0).round() as u8;
+                    intensity_buckets[offset.0 as usize] = intensity;
+                }
 
                 heatmap::show_heatmap(heatmap::Args {
                     buckets: intensity_buckets,
                     rows,
-                    cols,
+                    cols: DAILY_COLS,
                 });
             }
         }
@@ -176,8 +150,7 @@ pub fn show_logs(args: Args) -> Result<()> {
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
-    let mut heatmap_durations =
-        HeatmapDurations::new(from.clone(), to.unwrap_or_else(OffsetDateTime::now_utc));
+    let mut heatmap_durations = HeatmapDurations::new(from.clone(), to.clone());
 
     let mut head_span = None;
     let mut tail_span = None;
