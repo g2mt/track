@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use clap::{Args, Parser};
+use clap::{Args, Parser, ValueEnum};
+use clap_complete::Shell;
 
 use crate::database::Database;
 
@@ -35,6 +36,10 @@ pub struct Cli {
 
     /// Project name
     pub category: Option<Arc<str>>,
+
+    /// Generate shell completion scripts
+    #[arg(long, value_enum)]
+    pub completions: Option<Shell>,
 }
 
 impl Cli {

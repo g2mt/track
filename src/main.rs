@@ -1,5 +1,6 @@
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
+use clap_complete::generate;
 
 mod cli;
 use cli::Cli;
@@ -12,6 +13,12 @@ mod track;
 
 fn main() -> Result<()> {
     let args = Cli::parse();
+
+    if let Some(shell) = args.completions {
+        let mut cmd = Cli::command();
+        generate(shell, &mut cmd, "track", &mut std::io::stdout());
+        return Ok(());
+    }
 
     if args.categories {
         let mut db = args.open_database(false)?;
