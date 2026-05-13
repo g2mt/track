@@ -44,11 +44,14 @@ pub fn show_logs(
     if let (Some(from_dt), Some(to_dt)) = (from, to) {
         let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
             .expect("valid format description");
+        let date_ansi =
+            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
         println!(
-            "{}{}{} .. {}{}\n",
-            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow))),
+            "{}{}{} .. {}{}{}\n",
+            date_ansi,
             from_dt.format(&fmt).unwrap(),
             anstyle::Reset,
+            date_ansi,
             to_dt.format(&fmt).unwrap(),
             anstyle::Reset,
         );
