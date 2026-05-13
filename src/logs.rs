@@ -7,11 +7,14 @@ use time::OffsetDateTime;
 
 use crate::database::Database;
 
-pub fn show_logs(
-    db: &mut Database<File>,
-    from: Option<OffsetDateTime>,
-    to: Option<OffsetDateTime>,
-) -> Result<()> {
+pub struct LogArgs {
+    pub db: Database<File>,
+    pub from: Option<OffsetDateTime>,
+    pub to: Option<OffsetDateTime>,
+}
+
+pub fn show_logs(args: LogArgs) -> Result<()> {
+    let LogArgs { mut db, from, to } = args;
     let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
     let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 

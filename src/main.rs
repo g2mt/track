@@ -29,6 +29,8 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Info listing
+
     if args.categories {
         let mut db = args.open_database(false)?;
         let info = db.read_info()?.unwrap_or_default();
@@ -38,40 +40,64 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Logging
+
+    let mut log_args: Option<logs::LogArgs> = None;
     if args.logs.today {
         let from = time_utils::today()?;
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(&mut db, Some(from), None);
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: Some(from),
+            to: None,
+        });
     } else if args.logs.yesterday {
         let from = time_utils::yesterday()?;
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(&mut db, Some(from), None);
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: Some(from),
+            to: None,
+        });
     } else if args.logs.this_week {
         let from = time_utils::this_week()?;
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(&mut db, Some(from), None);
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: Some(from),
+            to: None,
+        });
     } else if args.logs.this_month {
         let from = time_utils::this_month()?;
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(&mut db, Some(from), None);
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: Some(from),
+            to: None,
+        });
     } else if args.logs.this_year {
         let from = time_utils::this_year()?;
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(&mut db, Some(from), None);
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: Some(from),
+            to: None,
+        });
     } else if args.from.is_some() || args.to.is_some() {
-        let mut db = args.open_database(false)?;
-        return logs::show_logs(
-            &mut db,
-            args.from
+        log_args = Some(logs::LogArgs {
+            db: args.open_database(false)?,
+            from: args
+                .from
                 .as_deref()
                 .map(time_utils::parse_datetime)
                 .transpose()?,
-            args.to
+            to: args
+                .to
                 .as_deref()
                 .map(time_utils::parse_datetime)
                 .transpose()?,
-        );
+        });
     }
+    if let Some(args) = log_args {
+        return logs::show_logs(args);
+    }
+
+    // Category manipulation
 
     let category = args
         .category
