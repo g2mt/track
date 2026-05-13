@@ -5,7 +5,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use time::OffsetDateTime;
 
-use crate::args::{Align, CategoryMatch};
+use crate::align::Align;
+use crate::args::CategoryMatch;
 use crate::cli;
 use crate::database::Database;
 use crate::heatmap::durations::HeatmapDurations;
@@ -70,7 +71,9 @@ pub fn show_logs(args: Args) -> Result<()> {
 
     let total: u64 = categories.iter().map(|(_, d)| d).sum();
 
-    let terminal_width = terminal_size::terminal_size().map(|(w, _)| w.0).unwrap_or(80);
+    let terminal_width = terminal_size::terminal_size()
+        .map(|(w, _)| w.0)
+        .unwrap_or(80);
 
     // Header: yellow FROM .. TO
     let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
@@ -110,8 +113,8 @@ pub fn show_logs(args: Args) -> Result<()> {
     }
 
     // Category lines, sorted by duration descending
-    let dim = anstyle::Style::new()
-        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack)));
+    let dim =
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack)));
     let bold = anstyle::Style::new().bold();
     let reset = anstyle::Reset;
     for (category, duration) in &categories {

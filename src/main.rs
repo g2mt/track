@@ -3,13 +3,14 @@ use std::io::IsTerminal;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
+use time::OffsetDateTime;
 
 mod args;
 use args::Args;
 #[cfg(debug_assertions)]
 use args::DebugHeatmap;
-use time::OffsetDateTime;
 
+mod align;
 mod cli;
 mod database;
 mod goals;

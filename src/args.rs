@@ -6,6 +6,7 @@ use anyhow::Result;
 use clap_complete::Shell;
 use regex::Regex;
 
+use crate::align::Align;
 use crate::database::Database;
 
 #[derive(Debug)]
@@ -148,10 +149,4 @@ pub struct Logs {
     /// Align category lines in log output
     #[arg(long = "log-align", default_value = "center")]
     pub log_align: Align,
-}
-
-#[derive(clap::ValueEnum, Clone, Debug)]
-pub enum Align {
-    Left,
-    Center,
 }
