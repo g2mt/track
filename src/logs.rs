@@ -35,7 +35,7 @@ pub fn show_logs(args: Args) -> Result<()> {
     });
 
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
-    let mut durations: HashMap<u64, u64> = HashMap::new();
+    let mut heatmap_durations: HashMap<u64, u64> = HashMap::new();
 
     let mut head_span = None;
     let mut tail_span = None;
@@ -66,7 +66,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         } else {
             entry.start_time - (entry.start_time % 86400)
         };
-        *durations.entry(bucket).or_insert(0) += duration;
+        *heatmap_durations.entry(bucket).or_insert(0) += duration;
 
         tail_span = tail_span.or(Some(span));
         head_span = Some(span);
@@ -128,24 +128,20 @@ pub fn show_logs(args: Args) -> Result<()> {
     );
 
     // Heatmap
-    if !durations.is_empty() {
-        let min_key = *durations.keys().min().unwrap();
-        let max_key = *durations.keys().max().unwrap();
+    if !heatmap_durations.is_empty() {
+        let min_key = *heatmap_durations.keys().min().unwrap();
+        let max_key = *heatmap_durations.keys().max().unwrap();
         let interval = if use_hourly { 3600u64 } else { 86400u64 };
-        let range_start = from_ts
-            .map(|f| f - (f % interval))
-            .unwrap_or(min_key);
-        let range_end = to_ts
-            .map(|t| t - (t % interval))
-            .unwrap_or(max_key);
+        let range_start = from_ts.map(|f| f - (f % interval)).unwrap_or(min_key);
+        let range_end = to_ts.map(|t| t - (t % interval)).unwrap_or(max_key);
         let n = ((range_end - range_start) / interval + 1) as usize;
 
-        let max_secs = *durations.values().max().unwrap_or(&1);
+        let max_secs = *heatmap_durations.values().max().unwrap_or(&1);
 
         let mut buckets = Vec::with_capacity(n);
         for i in 0..n {
             let key = range_start + (i as u64) * interval;
-            let secs = durations.get(&key).copied().unwrap_or(0);
+            let secs = heatmap_durations.get(&key).copied().unwrap_or(0);
             let intensity = if max_secs > 0 {
                 ((secs as f64 / max_secs as f64) * 10.0).round() as u8
             } else {
@@ -155,10 +151,19 @@ pub fn show_logs(args: Args) -> Result<()> {
         }
 
         if use_hourly {
+            let cols = if let Some(from) = from
+                && from.hour() == 0
+                && from.minute() == 0
+                && from.second() == 0
+            {
+                n.max(24)
+            } else {
+                n
+            };
             heatmap::show_heatmap(heatmap::Args {
                 buckets,
                 rows: 1,
-                cols: Some(n),
+                cols: Some(cols),
             });
         } else {
             let cols = 14;
