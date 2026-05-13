@@ -14,6 +14,15 @@ pub enum CategoryMatch {
     Regex(Regex),
 }
 
+impl CategoryMatch {
+    pub fn matches(&self, category: &str) -> bool {
+        match self {
+            CategoryMatch::Exact(pat) => category == pat.as_str(),
+            CategoryMatch::Regex(re) => re.is_match(category),
+        }
+    }
+}
+
 #[derive(clap::Parser, Debug)]
 #[command(name = "track", version, about = "Simple time-tracking CLI utility")]
 pub struct Args {

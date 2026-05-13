@@ -46,11 +46,7 @@ pub fn show_logs(args: Args) -> Result<()> {
             }
         }
         if let Some(ref cm) = category_match {
-            let matched = match cm {
-                CategoryMatch::Exact(pat) => entry.category.as_ref() == pat.as_str(),
-                CategoryMatch::Regex(re) => re.is_match(&entry.category),
-            };
-            if !matched {
+            if !cm.matches(&entry.category) {
                 continue;
             }
         }
