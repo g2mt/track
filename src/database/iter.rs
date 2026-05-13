@@ -13,8 +13,8 @@ enum Direction {
 
 pub struct Iter<'a, Backing: Seek + Read> {
     backing: BufReader<&'a mut Backing>,
-    head_offset: Option<u64>, // points to the next, unread element
-    tail_offset: Option<u64>, // points to the previous, unread element
+    head_offset: Option<u64>, // points to the newline char of the next, unread element
+    tail_offset: Option<u64>, // points to the newline char ending the line of the previous, unread element
     seek_dir: Direction,
     had_error: bool,
 }
@@ -28,6 +28,14 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
             seek_dir: Direction::Forward,
             had_error: false,
         }
+    }
+
+    pub fn head_offset(&self) -> Option<u64> {
+        self.head_offset
+    }
+
+    pub fn tail_offset(&self) -> Option<u64> {
+        self.tail_offset
     }
 
     fn initial_seek_first_entry_offset(&mut self) -> Result<u64> {
