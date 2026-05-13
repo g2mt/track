@@ -14,3 +14,9 @@ serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = "1.0.145"
 terminal_size = "0.4.4"
 time = { version = "0.3.47", features = ["local-offset", "formatting"] }
+
+[dependencies.regex]
+version = "1.12.3"
+default-features = false
+features = ["std"]
+

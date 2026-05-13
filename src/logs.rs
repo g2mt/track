@@ -5,6 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use time::OffsetDateTime;
 
+use crate::args::CategoryMatch;
 use crate::cli;
 use crate::database::Database;
 
@@ -12,7 +13,7 @@ pub struct Args {
     pub db: Database<File>,
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
-    pub category: Option<Arc<str>>,
+    pub category_match: Option<CategoryMatch>,
     pub clean: bool,
 }
 
@@ -21,7 +22,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         mut db,
         from,
         to,
-        category,
+        category_match,
         clean,
     } = args;
     let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
@@ -44,8 +45,12 @@ pub fn show_logs(args: Args) -> Result<()> {
                 continue;
             }
         }
-        if let Some(ref cat) = category {
-            if entry.category.as_ref() != cat.as_ref() {
+        if let Some(ref cm) = category_match {
+            let matched = match cm {
+                CategoryMatch::Exact(pat) => entry.category.as_ref() == pat.as_str(),
+                CategoryMatch::Regex(re) => re.is_match(&entry.category),
+            };
+            if !matched {
                 continue;
             }
         }

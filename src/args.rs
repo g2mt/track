@@ -4,8 +4,15 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clap_complete::Shell;
+use regex::Regex;
 
 use crate::database::Database;
+
+#[derive(Debug)]
+pub enum CategoryMatch {
+    Exact(String),
+    Regex(Regex),
+}
 
 #[derive(clap::Parser, Debug)]
 #[command(name = "track", version, about = "Simple time-tracking CLI utility")]
@@ -36,6 +43,10 @@ pub struct Args {
     /// Category name
     pub category: Option<Arc<str>>,
 
+    /// Treat category as a regex pattern
+    #[arg(short = 'r', long = "regex")]
+    pub regex: bool,
+
     /// Clean mode (delete logs/records instead of showing)
     #[arg(long)]
     pub clean: bool,
@@ -49,6 +60,16 @@ impl Args {
     fn default_track_file() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
         PathBuf::from(home).join("Documents/track.jsonl")
+    }
+
+    pub fn category_match(&self) -> Result<Option<CategoryMatch>> {
+        self.category.as_ref().map(|cat| {
+            if self.regex {
+                Ok(CategoryMatch::Regex(Regex::new(cat)?))
+            } else {
+                Ok(CategoryMatch::Exact(cat.to_string()))
+            }
+        }).transpose()
     }
 
     pub fn open_database(&self, write: bool) -> Result<Database<File>> {
