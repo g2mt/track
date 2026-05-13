@@ -132,13 +132,25 @@ pub fn show_logs(args: Args) -> Result<()> {
         let min_key = *durations.keys().min().unwrap();
         let max_key = *durations.keys().max().unwrap();
         let interval = if use_hourly { 3600u64 } else { 86400u64 };
-        let n = ((max_key - min_key) / interval + 1) as usize;
+        let range_start = from_ts
+            .map(|f| f - (f % interval))
+            .unwrap_or(min_key);
+        let range_end = to_ts
+            .map(|t| t - (t % interval))
+            .unwrap_or(max_key);
+        let n = ((range_end - range_start) / interval + 1) as usize;
+
+        let max_secs = *durations.values().max().unwrap_or(&1);
 
         let mut buckets = Vec::with_capacity(n);
         for i in 0..n {
-            let key = min_key + (i as u64) * interval;
+            let key = range_start + (i as u64) * interval;
             let secs = durations.get(&key).copied().unwrap_or(0);
-            let intensity = (secs / 1800).min(10) as u8;
+            let intensity = if max_secs > 0 {
+                ((secs as f64 / max_secs as f64) * 10.0).round() as u8
+            } else {
+                0
+            };
             buckets.push(intensity);
         }
 
