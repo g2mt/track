@@ -71,6 +71,20 @@ pub struct Args {
     /// Generate shell completion scripts
     #[arg(long, value_enum)]
     pub completion: Option<Shell>,
+
+    /// Show a debug heatmap (day: 24 columns, month: 7x5 grid)
+    #[cfg(debug_assertions)]
+    #[arg(long, value_enum)]
+    pub debug_heatmap: Option<DebugHeatmap>,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+#[cfg(debug_assertions)]
+pub enum DebugHeatmap {
+    /// 1 row, 24 columns (hours in a day)
+    Day,
+    /// 7 rows, 5 columns (weeks in a month)
+    Month,
 }
 
 impl Args {

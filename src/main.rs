@@ -6,11 +6,14 @@ use clap_complete::generate;
 
 mod args;
 use args::Args;
+#[cfg(debug_assertions)]
+use args::DebugHeatmap;
 use time::OffsetDateTime;
 
 mod cli;
 mod database;
 mod goals;
+mod heatmap;
 mod io_utils;
 mod logs;
 mod time_utils;
@@ -49,6 +52,18 @@ fn main() -> Result<()> {
 
     if args.goals {
         return goals::list_goals(args.open_database(false)?);
+    }
+
+    // Debug heatmap
+
+    #[cfg(debug_assertions)]
+    if let Some(ref mode) = args.debug_heatmap {
+        let (rows, cols) = match mode {
+            DebugHeatmap::Day => (1, 24),
+            DebugHeatmap::Month => (3, 14),
+        };
+        heatmap::debug::show_debug_heatmap(rows, cols);
+        return Ok(());
     }
 
     // Logging
