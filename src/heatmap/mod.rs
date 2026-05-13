@@ -12,7 +12,7 @@ pub struct Args {
     /// Number of rows in the heatmap grid (e.g. 7 for days of the week)
     pub rows: usize,
     /// Number of columns (computed as ceil(buckets / rows) if not provided)
-    pub cols: Option<usize>,
+    pub cols: usize,
 }
 
 fn color_for_value(val: u8) -> anstyle::Style {
@@ -34,9 +34,7 @@ pub fn show_heatmap(args: Args) {
     let (Width(term_width), _) = terminal_size::terminal_size().unwrap_or((Width(80), Height(24)));
     let term_width = term_width as usize;
 
-    let cols = args
-        .cols
-        .unwrap_or_else(|| (args.buckets.len() + args.rows - 1) / args.rows);
+    let cols = args.cols;
 
     // Pad buckets to fill the grid
     let padded_len = cols * args.rows;

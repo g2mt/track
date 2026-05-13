@@ -1,4 +1,4 @@
-use super::{Args, show_heatmap};
+use super::{show_heatmap, Args};
 
 /// Simple LCG PRNG
 struct Lcg {
@@ -29,6 +29,6 @@ pub fn show_debug_heatmap(rows: usize, cols: usize) {
     show_heatmap(Args {
         buckets,
         rows,
-        cols: Some(cols),
+        cols,
     });
 }

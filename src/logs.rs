@@ -163,7 +163,7 @@ pub fn show_logs(args: Args) -> Result<()> {
             heatmap::show_heatmap(heatmap::Args {
                 buckets,
                 rows: 1,
-                cols: Some(cols),
+                cols,
             });
         } else {
             let cols = 14;
@@ -171,7 +171,7 @@ pub fn show_logs(args: Args) -> Result<()> {
             heatmap::show_heatmap(heatmap::Args {
                 buckets,
                 rows,
-                cols: Some(cols),
+                cols,
             });
         }
     }
