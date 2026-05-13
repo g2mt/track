@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
+use crate::args::CategoryMatch;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Info {
     pub(super) goals: HashMap<Arc<str>, u64>,
@@ -29,6 +31,32 @@ impl Info {
             self.categories.push(category);
             true
         }
+    }
+
+    pub fn remove_categories(&mut self, cm: &CategoryMatch) -> Vec<Arc<str>> {
+        let mut removed: Vec<Arc<str>> = Vec::new();
+
+        self.goals.retain(|k, _| {
+            if cm.matches(k) {
+                removed.push(k.clone());
+                false
+            } else {
+                true
+            }
+        });
+
+        self.categories.retain(|c| {
+            if cm.matches(c) {
+                if !removed.contains(c) {
+                    removed.push(c.clone());
+                }
+                false
+            } else {
+                true
+            }
+        });
+
+        removed
     }
 }
 

@@ -92,6 +92,21 @@ fn main() -> Result<()> {
         println!("Set daily goal for {} to {}", category, daily);
         db.write_info(&info)?;
         Ok(())
+    } else if args.remove_category {
+        let cm = args.category_match()?.unwrap();
+        let mut db = args.open_database(true)?;
+        let mut info = db.read_info()?.unwrap_or_default();
+        let removed = info.remove_categories(&cm);
+        if removed.is_empty() {
+            println!("Category not found: {}", category);
+        } else {
+            println!("Removed categories:");
+            for cat in &removed {
+                println!("{}", cat);
+            }
+        }
+        db.write_info(&info)?;
+        Ok(())
     } else {
         let db = args.open_database(true)?;
         track::track(db, category)

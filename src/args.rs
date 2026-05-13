@@ -60,6 +60,10 @@ pub struct Args {
     #[arg(long)]
     pub clean: bool,
 
+    /// Remove category from info only (goals and category list)
+    #[arg(long = "remove-category")]
+    pub remove_category: bool,
+
     /// Generate shell completion scripts
     #[arg(long, value_enum)]
     pub completion: Option<Shell>,
@@ -72,13 +76,16 @@ impl Args {
     }
 
     pub fn category_match(&self) -> Result<Option<CategoryMatch>> {
-        self.category.as_ref().map(|cat| {
-            if self.regex {
-                Ok(CategoryMatch::Regex(Regex::new(cat)?))
-            } else {
-                Ok(CategoryMatch::Exact(cat.to_string()))
-            }
-        }).transpose()
+        self.category
+            .as_ref()
+            .map(|cat| {
+                if self.regex {
+                    Ok(CategoryMatch::Regex(Regex::new(cat)?))
+                } else {
+                    Ok(CategoryMatch::Exact(cat.to_string()))
+                }
+            })
+            .transpose()
     }
 
     pub fn open_database(&self, write: bool) -> Result<Database<File>> {
