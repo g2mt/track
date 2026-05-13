@@ -6,12 +6,12 @@ use crate::heatmap::{show_heatmap, Args};
 
 /// Number of days since the starting day in *from*
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
-pub(crate) struct DayOffset(u64);
+pub struct DayOffset(u64);
 
-pub(crate) const HOURLY_CALENDAR_MAX: u64 = 32 * 3600;
-pub(crate) const DAILY_COLS: usize = 14;
+pub const HOURLY_CALENDAR_MAX: u64 = 32 * 3600;
+pub const DAILY_COLS: usize = 14;
 
-pub(crate) enum HeatmapDurations {
+pub enum HeatmapDurations {
     /// Hourly durations with how much work is done per hour
     Hourly {
         buckets: Vec<u64>,
@@ -25,7 +25,7 @@ pub(crate) enum HeatmapDurations {
 }
 
 impl HeatmapDurations {
-    pub(crate) fn new(from: Option<OffsetDateTime>, to: Option<OffsetDateTime>) -> Self {
+    pub fn new(from: Option<OffsetDateTime>, to: Option<OffsetDateTime>) -> Self {
         let to = to.unwrap_or_else(OffsetDateTime::now_utc);
         let use_hourly = from.as_ref().map_or(false, |f| {
             let diff = to - *f;
@@ -53,7 +53,7 @@ impl HeatmapDurations {
         }
     }
 
-    pub(crate) fn add_entry(&mut self, timestamp: OffsetDateTime, duration: u64) {
+    pub fn add_entry(&mut self, timestamp: OffsetDateTime, duration: u64) {
         match self {
             Self::Hourly { buckets, from, .. } => {
                 let idx: usize = (timestamp - *from).whole_hours().try_into().unwrap();
@@ -67,7 +67,7 @@ impl HeatmapDurations {
         }
     }
 
-    pub(crate) fn show(&self) {
+    pub fn show(&self) {
         match self {
             Self::Hourly { buckets, from } => {
                 if buckets.is_empty() {
