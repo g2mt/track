@@ -73,9 +73,10 @@ pub fn show_logs(
     println!();
     let total_d = std::time::Duration::from_secs(total);
     println!(
-        "{}{}Total time:{} {}",
-        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue))),
-        anstyle::Style::new().bold(),
+        "{}Total time:{} {}",
+        anstyle::Style::new()
+            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
+            .bold(),
         anstyle::Reset,
         humantime::format_duration(total_d),
     );
