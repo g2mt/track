@@ -9,7 +9,7 @@ use crate::heatmap::{show_heatmap, Args};
 pub struct DayOffset(u64);
 
 pub const HOURLY_CALENDAR_MAX: u64 = 32 * 3600;
-pub const DAILY_COLS: usize = 14;
+pub const DAILY_COLS: usize = 28;
 
 pub enum HeatmapDurations {
     /// Hourly durations with how much work is done per hour
