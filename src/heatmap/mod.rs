@@ -5,6 +5,7 @@ use terminal_size::{Height, Width};
 const SQUARE: char = '\u{25A0}';
 
 pub mod debug;
+pub mod durations;
 
 pub struct Args {
     /// Day-by-day intensity values (0-10)
