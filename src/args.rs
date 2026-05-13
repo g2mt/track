@@ -1,16 +1,15 @@
-use std::fs::{File, TryLockError};
+use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Result;
-use clap::{Args, Parser, ValueEnum};
 use clap_complete::Shell;
 
 use crate::database::Database;
 
-#[derive(Parser, Debug)]
+#[derive(clap::Parser, Debug)]
 #[command(name = "track", version, about = "Simple time-tracking CLI utility")]
-pub struct Cli {
+pub struct Args {
     /// Set the tracking file path
     #[arg(short = 'f', long = "file")]
     pub file: Option<String>,
@@ -42,7 +41,7 @@ pub struct Cli {
     pub completion: Option<Shell>,
 }
 
-impl Cli {
+impl Args {
     fn default_track_file() -> PathBuf {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
         PathBuf::from(home).join("Documents/track.jsonl")
@@ -64,7 +63,7 @@ impl Cli {
     }
 }
 
-#[derive(Args, Debug)]
+#[derive(clap::Args, Debug)]
 #[group(id = "dated_log", required = false, multiple = false)]
 pub struct Logs {
     /// Show today's logs

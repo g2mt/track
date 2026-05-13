@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use clap_complete::generate;
 
-mod cli;
-use cli::Cli;
+mod args;
+use args::Args;
 
 mod database;
 mod io_utils;
@@ -12,10 +12,10 @@ mod time_utils;
 mod track;
 
 fn main() -> Result<()> {
-    let args = Cli::parse();
+    let args = Args::parse();
 
     if let Some(shell) = args.completion {
-        let mut cmd = Cli::command();
+        let mut cmd = Args::command();
         let bin_name = cmd.get_name().to_string();
         generate(shell, &mut cmd, &bin_name, &mut std::io::stdout());
         let style =
