@@ -18,8 +18,8 @@ fn main() -> Result<()> {
         let mut cmd = Cli::command();
         let bin_name = cmd.get_name().to_string();
         generate(shell, &mut cmd, &bin_name, &mut std::io::stdout());
-        let style = anstyle::Style::new()
-            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+        let style =
+            anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
         eprintln!(
             "{style}Hint: use '{bin} --completion {shell} > ~/.config/{shell}/completions/{bin}.{shell}' to generate completions for current user{reset}",
             style = style.render(),

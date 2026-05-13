@@ -31,7 +31,7 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
     }
 
     fn initial_seek_first_entry_offset(&mut self) -> Result<u64> {
-        if let Some (head_offset)  = self.head_offset {
+        if let Some(head_offset) = self.head_offset {
             return Ok(head_offset);
         }
         self.backing.seek(SeekFrom::Start(0))?;
@@ -55,7 +55,7 @@ impl<'a, Backing: Seek + Read> Iter<'a, Backing> {
     }
 
     fn initial_seek_last_entry_offset(&mut self) -> Result<u64> {
-        if let Some(offset) = self.tail_offset  {
+        if let Some(offset) = self.tail_offset {
             return Ok(offset);
         }
         // The next_back function always expect that the tail_offset starts at a position
@@ -101,7 +101,9 @@ impl<'a, Backing: Seek + Read> Iterator for Iter<'a, Backing> {
             }
         };
         // End the iteration if the two ends cross
-        if let Some(tail_offset) = self.tail_offset && pos > tail_offset {
+        if let Some(tail_offset) = self.tail_offset
+            && pos > tail_offset
+        {
             return None;
         }
 
@@ -188,9 +190,10 @@ impl<'a, Backing: Seek + Read> DoubleEndedIterator for Iter<'a, Backing> {
                 let newline_pos = pos.checked_add(last_nl).unwrap();
                 // eprintln!("==> {}", newline_pos);
                 // Seek to after the new line character
-                iter_try!(self
-                    .backing
-                    .seek(SeekFrom::Start(newline_pos.checked_add(1).unwrap())));
+                iter_try!(
+                    self.backing
+                        .seek(SeekFrom::Start(newline_pos.checked_add(1).unwrap()))
+                );
 
                 // Scan the next line
                 let mut line = Vec::new();
