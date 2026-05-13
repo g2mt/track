@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use time::OffsetDateTime;
 
-use crate::align::Align;
+use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
 use crate::cli;
 use crate::database::Database;
@@ -80,37 +80,27 @@ pub fn show_logs(args: Args) -> Result<()> {
         .expect("valid format description");
     let date_ansi =
         anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
-    let from_str = from
+    let from_s = from
         .as_ref()
         .map(|dt| dt.format(&fmt).unwrap())
         .unwrap_or_else(|| "beginning".to_string());
-    let to_str = to
+    let to_s = to
         .as_ref()
         .map(|dt| dt.format(&fmt).unwrap())
         .unwrap_or_else(|| "now".to_string());
-    let header = format!("{} .. {}", from_str, to_str);
-    match align {
-        Align::Left => {
-            println!(
-                "{date_ansi}{}{reset} .. {date_ansi}{}{reset}\n",
-                from_str,
-                to_str,
-                date_ansi = date_ansi,
-                reset = anstyle::Reset,
-            );
-        }
-        Align::Center => {
-            let padding = (terminal_width as usize).saturating_sub(header.len()) / 2;
-            print!("{:padding$}", "", padding = padding);
-            println!(
-                "{date_ansi}{}{reset} .. {date_ansi}{}{reset}\n",
-                from_str,
-                to_str,
-                date_ansi = date_ansi,
-                reset = anstyle::Reset,
-            );
-        }
-    }
+    align.print(
+        &[
+            TextFragment::Ansi(&date_ansi),
+            TextFragment::Raw(&from_s),
+            TextFragment::Ansi(&anstyle::Reset),
+            TextFragment::Raw(" .. "),
+            TextFragment::Ansi(&date_ansi),
+            TextFragment::Raw(&to_s),
+            TextFragment::Ansi(&anstyle::Reset),
+        ],
+        terminal_width,
+    );
+    println!();
 
     // Category lines, sorted by duration descending
     let dim =
@@ -120,55 +110,37 @@ pub fn show_logs(args: Args) -> Result<()> {
     for (category, duration) in &categories {
         let d = std::time::Duration::from_secs(*duration);
         let dur_str = humantime::format_duration(d).to_string();
-        match align {
-            Align::Left => {
-                println!(
-                    "  {bold}{category}{reset} {dim}{dur_str}{reset}",
-                    bold = bold,
-                    reset = reset,
-                    dim = dim,
-                );
-            }
-            Align::Center => {
-                let colon_pos = category.len() + 1;
-                let padding = (terminal_width as usize / 2).saturating_sub(colon_pos);
-                print!("{:padding$}", "", padding = padding);
-                println!(
-                    "{bold}{category}{reset} : {dim}{dur_str}{reset}",
-                    bold = bold,
-                    reset = reset,
-                    dim = dim,
-                );
-            }
-        }
+        align.print(
+            &[
+                TextFragment::Raw("  "),
+                TextFragment::Ansi(&bold),
+                TextFragment::Raw(category),
+                TextFragment::Ansi(&reset),
+                TextFragment::HalfDivisor(" : "),
+                TextFragment::Ansi(&dim),
+                TextFragment::Raw(&dur_str),
+                TextFragment::Ansi(&reset),
+            ],
+            terminal_width,
+        );
     }
 
     // Total
-    println!();
     let total_d = std::time::Duration::from_secs(total);
     let total_str = humantime::format_duration(total_d).to_string();
-    let total_line = format!("Total time: {}", total_str);
     let blue_bold = anstyle::Style::new()
         .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
         .bold();
-    match align {
-        Align::Left => {
-            println!(
-                "{blue_bold}Total time:{reset} {total_str}",
-                blue_bold = blue_bold,
-                reset = anstyle::Reset,
-            );
-        }
-        Align::Center => {
-            let padding = (terminal_width as usize).saturating_sub(total_line.len()) / 2;
-            print!("{:padding$}", "", padding = padding);
-            println!(
-                "{blue_bold}Total time:{reset} {total_str}",
-                blue_bold = blue_bold,
-                reset = anstyle::Reset,
-            );
-        }
-    }
+    println!();
+    align.print(
+        &[
+            TextFragment::Ansi(&blue_bold),
+            TextFragment::Raw("Total time:"),
+            TextFragment::Ansi(&anstyle::Reset),
+            TextFragment::Raw(&format!(" {}", total_str)),
+        ],
+        terminal_width,
+    );
 
     // Heatmap
     heatmap_durations.show(Some(terminal_width));

@@ -1,6 +1,6 @@
-use std::io::{stdout, Write};
+use std::io::{Write, stdout};
 
-use terminal_size::{Height, Width};
+use terminal_size::Width;
 
 const SQUARE: char = '\u{25A0}';
 
@@ -38,14 +38,11 @@ pub fn show_heatmap(args: Args) {
         return;
     }
 
-    let term_width = args
-        .terminal_width
-        .map(|w| w as usize)
-        .unwrap_or_else(|| {
-            terminal_size::terminal_size()
-                .map(|(Width(w), _)| w as usize)
-                .unwrap_or(80)
-        });
+    let term_width = args.terminal_width.map(|w| w as usize).unwrap_or_else(|| {
+        terminal_size::terminal_size()
+            .map(|(Width(w), _)| w as usize)
+            .unwrap_or(80)
+    });
 
     let cols = args.cols;
 
