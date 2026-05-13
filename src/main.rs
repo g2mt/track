@@ -73,6 +73,7 @@ fn main() -> Result<()> {
             db: args.open_database(args.clean)?, // clean requires write permissions
             from: log_from,
             to: log_to,
+            category: args.category.clone(),
             clean: args.clean,
         });
     }
