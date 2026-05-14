@@ -1,13 +1,13 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Cursor;
 
-use super::*;
+use super::super::{Database, Info};
 
 #[test]
 fn write_info_fits_in_place() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        goals: HashMap::new(),
+        goals: BTreeMap::new(),
         categories: vec!["test".into()],
     };
     db.write_info(&info).unwrap();
@@ -21,7 +21,7 @@ fn write_info_fits_in_place() {
 #[test]
 fn write_info_new_line_longer_shifts_rest() {
     let old_info = Info {
-        goals: HashMap::new(),
+        goals: BTreeMap::new(),
         categories: vec!["a".into()], // short -> small padding
     };
     let mut content = serde_json::to_string(&old_info).unwrap().into_bytes();
@@ -37,7 +37,7 @@ fn write_info_new_line_longer_shifts_rest() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(content));
 
     let new_info = Info {
-        goals: HashMap::from([("project".into(), 3600)]),
+        goals: BTreeMap::from([("project".into(), 3600)]),
         categories: vec!["project".into()],
     };
     db.write_info(&new_info).unwrap();
@@ -54,7 +54,7 @@ fn write_info_new_line_longer_shifts_rest() {
 fn read_info_roundtrip() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        goals: HashMap::from([("project1".into(), 3600), ("project2".into(), 7200)]),
+        goals: BTreeMap::from([("project1".into(), 3600), ("project2".into(), 7200)]),
         categories: vec!["project1".into(), "project2".into()],
     };
     db.write_info(&info).unwrap();
@@ -74,7 +74,7 @@ fn read_info_empty_file() {
 fn write_info_empty_file() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        goals: HashMap::new(),
+        goals: BTreeMap::new(),
         categories: vec![],
     };
     db.write_info(&info).unwrap();

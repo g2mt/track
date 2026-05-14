@@ -1,17 +1,18 @@
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::RangeBounds;
 
 use anyhow::Result;
 
 pub mod iter;
+pub mod range;
 pub mod schema;
 pub use schema::{Entry, Info};
+use time::OffsetDateTime;
 
 use crate::io_utils::Truncate;
 
 #[cfg(test)]
-mod tests_entry;
-#[cfg(test)]
-mod tests_info;
+mod tests;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -103,6 +104,16 @@ impl<Backing: Seek + Read> Database<Backing> {
     /// Returns a double-ended iterator over all entries in the backing storage.
     pub fn entries(&mut self) -> iter::Iter<'_, Backing> {
         iter::Iter::new(&mut self.backing)
+    }
+
+    /// Returns a double-ended iterator over the entries whose start date lies in a given range.
+    /// This iterator walks through the file using `.entries().rev()`. It skips entries ocurring
+    /// after the range, and ends once it encounters an entry ocurring before the range.
+    pub fn latest_entries_range<R>(&mut self, range: R) -> range::LatestRange<'_, Backing, R>
+    where
+        R: RangeBounds<OffsetDateTime>,
+    {
+        range::LatestRange::new(&mut self.backing, range)
     }
 }
 
