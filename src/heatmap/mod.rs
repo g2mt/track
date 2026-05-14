@@ -1,11 +1,12 @@
-use std::io::{Write, stdout};
+use std::io::{stdout, Write};
 
 use terminal_size::Width;
 
-const SQUARE: char = '\u{25A0}';
-
+#[cfg(debug_assertions)]
 pub mod debug;
 pub mod durations;
+
+const SQUARE: char = '\u{25A0}';
 
 pub struct Args {
     /// Day-by-day intensity values (0-10)
