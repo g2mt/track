@@ -20,6 +20,26 @@ pub struct Args {
     pub align: Align,
 }
 
+struct TimeRange {
+    from: Option<OffsetDateTime>,
+    to: Option<OffsetDateTime>,
+}
+
+impl std::ops::RangeBounds<OffsetDateTime> for TimeRange {
+    fn start_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
+        match &self.from {
+            Some(dt) => std::ops::Bound::Included(dt),
+            None => std::ops::Bound::Unbounded,
+        }
+    }
+    fn end_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
+        match &self.to {
+            Some(dt) => std::ops::Bound::Included(dt),
+            None => std::ops::Bound::Unbounded,
+        }
+    }
+}
+
 pub fn show_logs(args: Args) -> Result<()> {
     let Args {
         mut db,
@@ -29,27 +49,18 @@ pub fn show_logs(args: Args) -> Result<()> {
         clean,
         align,
     } = args;
-    let from_ts = from.as_ref().map(|dt| dt.unix_timestamp() as u64);
-    let to_ts = to.as_ref().map(|dt| dt.unix_timestamp() as u64);
 
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
     let mut heatmap_durations = HeatmapDurations::new(from.clone(), to.clone());
 
     let mut head_span = None;
     let mut tail_span = None;
-    for res in db.entries().rev() {
+    for res in db.latest_entries_range(TimeRange {
+        from: from.clone(),
+        to: to.clone(),
+    }) {
         let (span, entry) = res?;
 
-        if let Some(from) = from_ts {
-            if entry.start_time < from {
-                break;
-            }
-        }
-        if let Some(to) = to_ts {
-            if entry.start_time > to {
-                continue;
-            }
-        }
         if let Some(ref cm) = category_match {
             if !cm.matches(&entry.category) {
                 continue;
