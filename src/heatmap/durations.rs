@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use time::OffsetDateTime;
 
-use crate::heatmap::{show_heatmap, Args};
+use crate::heatmap::{Args, show_heatmap};
 
 /// Number of days since the starting day in *from*
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
