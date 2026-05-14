@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use time::OffsetDateTime;
 
-use crate::heatmap::{Args, show_heatmap};
+use crate::heatmap::{show_heatmap, Args};
 
 /// Number of days since the starting day in *from*
 #[derive(Hash, Eq, PartialEq, Ord, PartialOrd, Clone, Copy)]
@@ -39,7 +39,7 @@ impl HeatmapDurations {
             } else {
                 to - time::Duration::hours(24)
             };
-            let n = (to - from).whole_hours();
+            let n = (to - from).whole_hours() + 1;
             Self::Hourly {
                 buckets: vec![0; n.try_into().unwrap()],
                 from,
