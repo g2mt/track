@@ -68,7 +68,8 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
         content.extend(elapsed_str.chars());
 
         // Print progress bar
-        let filled = ((elapsed_secs / max_secs) * term_w as f64).clamp(0.0, term_w as f64) as usize;
+        let filled =
+            (((elapsed_secs / max_secs).fract() * term_w as f64) as usize).clamp(0, term_w);
         let mut line = String::with_capacity(term_w + 64);
         line.push('\r');
         let filled_style = anstyle::Style::new()
