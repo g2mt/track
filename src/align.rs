@@ -5,7 +5,7 @@ pub enum Align {
 }
 
 pub enum TextFragment<'a> {
-    Raw(&'a dyn core::fmt::Display),
+    Raw(&'a str),
     HalfDivisor(&'a str),
     Ansi(&'a dyn core::fmt::Display), // styling, does not count towards width
 }
