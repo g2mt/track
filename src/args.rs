@@ -134,6 +134,12 @@ impl Args {
             .as_ref()
             .map(PathBuf::from)
             .unwrap_or_else(Self::default_track_file);
+
+        if write && std::env::var_os("TRACK_DISABLE_BACKUP").is_none() && path.try_exists()? {
+            let bak = path.with_extension("bak");
+            std::fs::copy(&path, &bak)?;
+        }
+
         let file = std::fs::OpenOptions::new()
             .read(true)
             .write(write)
