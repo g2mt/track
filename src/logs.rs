@@ -7,9 +7,9 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
-use crate::utils::cli;
 use crate::database::Database;
 use crate::heatmap::durations::HeatmapDurations;
+use crate::utils::cli;
 
 pub struct Args {
     pub db: Database<File>,

@@ -108,16 +108,21 @@ fn main() -> Result<()> {
 
     let mut log_from: Option<OffsetDateTime> = None;
     let mut log_to: Option<OffsetDateTime> = None;
-    if args.logs.today {
+    let show_logs = if args.logs.today {
         log_from = Some(utils::time::today()?);
+        true
     } else if args.logs.yesterday {
         log_from = Some(utils::time::yesterday()?);
+        true
     } else if args.logs.this_week {
         log_from = Some(utils::time::this_week()?);
+        true
     } else if args.logs.this_month {
         log_from = Some(utils::time::this_month()?);
+        true
     } else if args.logs.this_year {
         log_from = Some(utils::time::this_year()?);
+        true
     } else if args.from.is_some() || args.to.is_some() {
         log_from = args
             .from
@@ -129,8 +134,11 @@ fn main() -> Result<()> {
             .as_deref()
             .map(utils::time::parse_datetime)
             .transpose()?;
-    }
-    if log_from.is_some() || log_to.is_some() {
+        true
+    } else {
+        args.clean
+    };
+    if show_logs {
         return logs::show_logs(logs::Args {
             db: args.open_database(args.clean)?, // clean requires write permissions
             from: log_from,
