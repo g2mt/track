@@ -45,7 +45,7 @@ fn main() -> Result<()> {
     if args.categories {
         let mut db = args.open_database(false)?;
         let info = db.read_info()?.unwrap_or_default();
-        for cat in info.categories() {
+        for cat in info.keys() {
             println!("{}", cat);
         }
         return Ok(());

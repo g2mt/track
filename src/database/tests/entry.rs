@@ -1,7 +1,9 @@
 use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::num::NonZeroU64;
 
 use super::mock::MockFile;
-use super::super::{Database, Entry, Info, Span};
+use super::super::{CategoryData, Database, Entry, Info, Span};
 
 #[test]
 fn append_and_update_entry() {
@@ -130,8 +132,10 @@ fn remove_span_removes_middle_entries() {
     });
 
     let info = Info {
-        categories: vec!["a".into(), "b".into()],
-        ..Default::default()
+        categories: BTreeMap::from([
+            ("a".into(), CategoryData { goal: None }),
+            ("b".into(), CategoryData { goal: None }),
+        ]),
     };
     db.write_info(&info).unwrap();
 
@@ -202,8 +206,10 @@ fn remove_span_removes_head_entries() {
     });
 
     let info = Info {
-        categories: vec!["a".into(), "b".into()],
-        ..Default::default()
+        categories: BTreeMap::from([
+            ("a".into(), CategoryData { goal: None }),
+            ("b".into(), CategoryData { goal: None }),
+        ]),
     };
     db.write_info(&info).unwrap();
 
@@ -273,8 +279,10 @@ fn remove_span_removes_tail_entries() {
     });
 
     let info = Info {
-        categories: vec!["a".into(), "b".into()],
-        ..Default::default()
+        categories: BTreeMap::from([
+            ("a".into(), CategoryData { goal: None }),
+            ("b".into(), CategoryData { goal: None }),
+        ]),
     };
     db.write_info(&info).unwrap();
 

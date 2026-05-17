@@ -1,18 +1,18 @@
 use std::collections::BTreeMap;
 use std::io::Cursor;
+use std::num::NonZeroU64;
 
-use super::super::{Database, Info};
+use super::super::{CategoryData, Database, Info};
 
 #[test]
 fn write_info_fits_in_place() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        goals: BTreeMap::new(),
-        categories: vec!["test".into()],
+        categories: BTreeMap::from([("test".into(), CategoryData { goal: None })]),
     };
     db.write_info(&info).unwrap();
     let content = db.backing.into_inner();
-    assert!(content.starts_with(b"{\"goals\":{},\"categories\":[\"test\"]}"));
+    assert!(content.starts_with(b"{\"categories\":{\"test\":{\"goal\":null}}}"));
     // Line length must be a multiple of 128
     let newline_pos = content.iter().position(|&b| b == b'\n').unwrap();
     assert_eq!((newline_pos + 1) % 128, 0);
@@ -21,8 +21,7 @@ fn write_info_fits_in_place() {
 #[test]
 fn write_info_new_line_longer_shifts_rest() {
     let old_info = Info {
-        goals: BTreeMap::new(),
-        categories: vec!["a".into()], // short -> small padding
+        categories: BTreeMap::from([("a".into(), CategoryData { goal: None })]),
     };
     let mut content = serde_json::to_string(&old_info).unwrap().into_bytes();
     let line_len = content.len() + 1;
@@ -37,8 +36,7 @@ fn write_info_new_line_longer_shifts_rest() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(content));
 
     let new_info = Info {
-        goals: BTreeMap::from([("project".into(), 3600)]),
-        categories: vec!["project".into()],
+        categories: BTreeMap::from([("project".into(), CategoryData { goal: NonZeroU64::new(3600) })]),
     };
     db.write_info(&new_info).unwrap();
 
@@ -54,13 +52,14 @@ fn write_info_new_line_longer_shifts_rest() {
 fn read_info_roundtrip() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        goals: BTreeMap::from([("project1".into(), 3600), ("project2".into(), 7200)]),
-        categories: vec!["project1".into(), "project2".into()],
+        categories: BTreeMap::from([
+            ("project1".into(), CategoryData { goal: NonZeroU64::new(3600) }),
+            ("project2".into(), CategoryData { goal: NonZeroU64::new(7200) }),
+        ]),
     };
     db.write_info(&info).unwrap();
     let read_back = db.read_info().unwrap().expect("info present");
-    assert_eq!(read_back.goals(), &info.goals);
-    assert_eq!(read_back.categories(), info.categories.as_slice());
+    assert_eq!(read_back.categories, info.categories);
 }
 
 #[test]
@@ -73,10 +72,7 @@ fn read_info_empty_file() {
 #[test]
 fn write_info_empty_file() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
-    let info = Info {
-        goals: BTreeMap::new(),
-        categories: vec![],
-    };
+    let info = Info::default();
     db.write_info(&info).unwrap();
     let content = db.backing.into_inner();
     assert!(!content.is_empty());

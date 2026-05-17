@@ -32,7 +32,11 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
             elapsed += Duration::from_secs(entry.end_time - entry.start_time);
         }
     }
-    let max_secs = info.goals().get(&category).copied().unwrap_or(3600) as f64;
+    let max_secs = info
+        .data(&category)
+        .and_then(|d| d.goal)
+        .map(|n| n.get())
+        .unwrap_or(3600) as f64;
 
     let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
     let mut db_entry = Entry {
