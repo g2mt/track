@@ -13,6 +13,7 @@ use args::DebugHeatmap;
 mod align;
 mod cli;
 mod database;
+use database::CategoryData;
 mod heatmap;
 mod io_utils;
 mod logs;
@@ -59,7 +60,38 @@ fn main() -> Result<()> {
     }
 
     if args.goals {
-        return manip::list_goals(args.open_database(false)?);
+        return manip::list(manip::Args {
+            db: args.open_database(false)?,
+            align: args.align.clone(),
+            printer: |data: &CategoryData| {
+                data.goal
+                    .map(|g| {
+                        let d = std::time::Duration::from_secs(g.get());
+                        humantime::format_duration(d).to_string()
+                    })
+                    .unwrap_or_default()
+            },
+        });
+    }
+
+    if args.frequencies {
+        return manip::list(manip::Args {
+            db: args.open_database(false)?,
+            align: args.align.clone(),
+            printer: |data: &CategoryData| {
+                data.notify_every
+                    .as_ref()
+                    .map(|f| match f {
+                        database::Frequency::Day => "daily".to_string(),
+                        database::Frequency::Hour => "hourly".to_string(),
+                        database::Frequency::DayOfWeek(wd) => {
+                            format!("on {}", wd)
+                        }
+                        database::Frequency::DayOfMonth(d) => format!("day {} of every month", d),
+                    })
+                    .unwrap_or_default()
+            },
+        });
     }
 
     // Debug heatmap
@@ -107,7 +139,7 @@ fn main() -> Result<()> {
             to: log_to,
             category_match: args.category_match()?,
             clean: args.clean,
-            align: args.logs.log_align.clone(),
+            align: args.align.clone(),
         });
     }
 
@@ -118,9 +150,14 @@ fn main() -> Result<()> {
         .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
     if let Some(daily) = &args.daily {
-        return manip::set_daily_goal(&args, category, daily);
+        return manip::set_daily_goal(
+            args.open_database(true)?,
+            category,
+            daily,
+            args.frequency.as_ref(),
+        );
     } else if let Some(ref freq) = args.frequency {
-        return manip::set_frequency(&args, category, freq.clone());
+        return manip::set_frequency(args.open_database(true)?, category, freq.clone());
     } else if args.remove_category {
         let cm = args.category_match()?.unwrap();
         let mut db = args.open_database(true)?;

@@ -4,28 +4,78 @@ use std::sync::Arc;
 
 use anyhow::Result;
 
-use crate::args::Args;
-use crate::database::{Database, Frequency};
+use crate::align::{Align, TextFragment};
+use crate::database::{CategoryData, Database, Frequency};
 
-pub fn list_goals(mut db: Database<File>) -> Result<()> {
+pub struct Args {
+    pub db: Database<File>,
+    pub align: Align,
+    pub printer: fn(&CategoryData) -> String,
+}
+
+pub fn list(args: Args) -> Result<()> {
+    let Args {
+        mut db,
+        align,
+        printer,
+    } = args;
     let info = db.read_info()?.unwrap_or_default();
+    let terminal_width = terminal_size::terminal_size()
+        .map(|(w, _)| w.0)
+        .unwrap_or(80);
+
+    let bold = anstyle::Style::new().bold();
+    let reset = anstyle::Reset;
+    let blue_bold = anstyle::Style::new()
+        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Blue)))
+        .bold();
+
+    // Header
+    let total = info.size();
+    align.print(
+        &[
+            TextFragment::Ansi(&blue_bold),
+            TextFragment::Raw("Total: "),
+            TextFragment::Ansi(&reset),
+            TextFragment::Raw(&total.to_string()),
+        ],
+        terminal_width,
+    );
+    println!();
+
     for (category, data) in info.iter() {
-        if let Some(goal) = data.goal {
-            let d = std::time::Duration::from_secs(goal.get());
-            println!("{} {}", category, humantime::format_duration(d));
+        let value = printer(data);
+        if value.is_empty() {
+            continue;
         }
+        align.print(
+            &[
+                TextFragment::Raw("  "),
+                TextFragment::Ansi(&bold),
+                TextFragment::Raw(category),
+                TextFragment::Ansi(&reset),
+                TextFragment::HalfDivisor(" : "),
+                TextFragment::Raw(&value),
+            ],
+            terminal_width,
+        );
     }
+
     Ok(())
 }
 
-pub fn set_daily_goal(args: &Args, category: Arc<str>, daily: &str) -> Result<()> {
+pub fn set_daily_goal(
+    mut db: Database<File>,
+    category: Arc<str>,
+    daily: &str,
+    frequency: Option<&Frequency>,
+) -> Result<()> {
     let duration = daily.parse::<humantime::Duration>()?;
-    let mut db = args.open_database(true)?;
     let mut info = db.read_info()?.unwrap_or_default();
     {
         let data = info.add_category(category.clone());
         data.goal = NonZeroU64::new(duration.as_secs());
-        if let Some(ref freq) = args.frequency {
+        if let Some(freq) = frequency {
             data.notify_every = Some(freq.clone());
         }
     }
@@ -44,8 +94,7 @@ pub fn set_daily_goal(args: &Args, category: Arc<str>, daily: &str) -> Result<()
     Ok(())
 }
 
-pub fn set_frequency(args: &Args, category: Arc<str>, freq: Frequency) -> Result<()> {
-    let mut db = args.open_database(true)?;
+pub fn set_frequency(mut db: Database<File>, category: Arc<str>, freq: Frequency) -> Result<()> {
     let mut info = db.read_info()?.unwrap_or_default();
     {
         let data = info.add_category(category.clone());

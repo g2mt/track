@@ -39,6 +39,11 @@ impl Info {
         self.categories.keys()
     }
 
+    /// Returns the number of categories.
+    pub fn size(&self) -> usize {
+        self.categories.len()
+    }
+
     /// Returns a reference to the data for a given category, or `None`.
     pub fn data(&self, category: &str) -> Option<&CategoryData> {
         self.categories.get(category)

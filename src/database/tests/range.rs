@@ -2,8 +2,8 @@ use std::cell::RefCell;
 
 use time::OffsetDateTime;
 
-use super::mock::MockFile;
 use super::super::{Database, Entry, Info};
+use super::mock::MockFile;
 
 fn dt(ts: u64) -> OffsetDateTime {
     OffsetDateTime::from_unix_timestamp(ts as i64).unwrap()
@@ -19,9 +19,21 @@ fn range_all() {
     db.write_info(&Info::default()).unwrap();
 
     let entries = [
-        Entry { category: "a".into(), start_time: 10, end_time: 20 },
-        Entry { category: "b".into(), start_time: 30, end_time: 40 },
-        Entry { category: "c".into(), start_time: 50, end_time: 60 },
+        Entry {
+            category: "a".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "b".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c".into(),
+            start_time: 50,
+            end_time: 60,
+        },
     ];
     for entry in &entries {
         db.append_entry(entry).unwrap();
@@ -48,9 +60,21 @@ fn range_from_bound() {
     db.write_info(&Info::default()).unwrap();
 
     let entries = [
-        Entry { category: "a".into(), start_time: 10, end_time: 20 },
-        Entry { category: "b".into(), start_time: 30, end_time: 40 },
-        Entry { category: "c".into(), start_time: 50, end_time: 60 },
+        Entry {
+            category: "a".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "b".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c".into(),
+            start_time: 50,
+            end_time: 60,
+        },
     ];
     for entry in &entries {
         db.append_entry(entry).unwrap();
@@ -76,9 +100,21 @@ fn range_to_bound() {
     db.write_info(&Info::default()).unwrap();
 
     let entries = [
-        Entry { category: "a".into(), start_time: 10, end_time: 20 },
-        Entry { category: "b".into(), start_time: 30, end_time: 40 },
-        Entry { category: "c".into(), start_time: 50, end_time: 60 },
+        Entry {
+            category: "a".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "b".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c".into(),
+            start_time: 50,
+            end_time: 60,
+        },
     ];
     for entry in &entries {
         db.append_entry(entry).unwrap();
@@ -104,9 +140,21 @@ fn range_both_bounds() {
     db.write_info(&Info::default()).unwrap();
 
     let entries = [
-        Entry { category: "a".into(), start_time: 10, end_time: 20 },
-        Entry { category: "b".into(), start_time: 30, end_time: 40 },
-        Entry { category: "c".into(), start_time: 50, end_time: 60 },
+        Entry {
+            category: "a".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "b".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c".into(),
+            start_time: 50,
+            end_time: 60,
+        },
     ];
     for entry in &entries {
         db.append_entry(entry).unwrap();
@@ -132,8 +180,16 @@ fn range_empty() {
     db.write_info(&Info::default()).unwrap();
 
     let entries = [
-        Entry { category: "a".into(), start_time: 10, end_time: 20 },
-        Entry { category: "b".into(), start_time: 30, end_time: 40 },
+        Entry {
+            category: "a".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "b".into(),
+            start_time: 30,
+            end_time: 40,
+        },
     ];
     for entry in &entries {
         db.append_entry(entry).unwrap();

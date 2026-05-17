@@ -39,9 +39,17 @@ pub struct Args {
     #[arg(short = 'g', long)]
     pub goals: bool,
 
+    /// List all notification frequencies
+    #[arg(long)]
+    pub frequencies: bool,
+
     /// Set daily goal for a project (e.g. "1h")
     #[arg(long)]
     pub daily: Option<String>,
+
+    /// Align category lines in output
+    #[arg(long, default_value = "center")]
+    pub align: Align,
 
     #[command(flatten)]
     pub logs: Logs,
@@ -181,8 +189,4 @@ pub struct Logs {
     /// Show this year's logs
     #[arg(long)]
     pub this_year: bool,
-
-    /// Align category lines in log output
-    #[arg(long = "log-align", default_value = "center")]
-    pub log_align: Align,
 }
