@@ -6,7 +6,7 @@ use anyhow::Result;
 pub mod iter;
 pub mod range;
 pub mod schema;
-pub use schema::{Entry, Info};
+pub use schema::{CategoryData, Entry, Frequency, Info};
 use time::OffsetDateTime;
 
 use crate::io_utils::Truncate;

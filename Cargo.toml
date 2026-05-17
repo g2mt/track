@@ -13,7 +13,7 @@ humantime = "2.3.0"
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = "1.0.145"
 terminal_size = "0.4.4"
-time = { version = "0.3.47", features = ["local-offset", "formatting", "serde"] }
+time = { version = "0.3.47", features = ["local-offset", "formatting", "serde", "serde-human-readable"] }
 
 [dependencies.regex]
 version = "1.12.3"

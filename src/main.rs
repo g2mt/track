@@ -13,10 +13,11 @@ use args::DebugHeatmap;
 mod align;
 mod cli;
 mod database;
-mod goals;
 mod heatmap;
 mod io_utils;
 mod logs;
+mod manip;
+mod notify;
 mod time_utils;
 mod track;
 
@@ -40,6 +41,12 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    // Notify
+
+    if args.notify {
+        return notify::run_daemon(args);
+    }
+
     // Info listing
 
     if args.categories {
@@ -52,7 +59,7 @@ fn main() -> Result<()> {
     }
 
     if args.goals {
-        return goals::list_goals(args.open_database(false)?);
+        return manip::list_goals(args.open_database(false)?);
     }
 
     // Debug heatmap
@@ -111,7 +118,9 @@ fn main() -> Result<()> {
         .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
     if let Some(daily) = &args.daily {
-        return goals::set_daily_goal(&args, category, daily);
+        return manip::set_daily_goal(&args, category, daily);
+    } else if let Some(ref freq) = args.frequency {
+        return manip::set_frequency(&args, category, freq.clone());
     } else if args.remove_category {
         let cm = args.category_match()?.unwrap();
         let mut db = args.open_database(true)?;

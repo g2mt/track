@@ -3,13 +3,24 @@ use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
+use time::Weekday;
 
 use crate::args::CategoryMatch;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum Frequency {
+    Day,
+    Hour,
+    DayOfWeek(Weekday),
+    DayOfMonth(u8),
+}
+
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 pub struct CategoryData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goal: Option<NonZeroU64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notify_every: Option<Frequency>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
@@ -44,7 +55,7 @@ impl Info {
         use std::collections::btree_map::Entry;
         let e = self.categories.entry(category);
         match e {
-            Entry::Vacant(_) => e.or_insert(CategoryData { goal: None }),
+            Entry::Vacant(_) => e.or_insert(CategoryData::default()),
             Entry::Occupied(occ) => occ.into_mut(),
         }
     }

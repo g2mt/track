@@ -7,7 +7,7 @@ use clap_complete::Shell;
 use regex::Regex;
 
 use crate::align::Align;
-use crate::database::Database;
+use crate::database::{Database, Frequency};
 
 #[derive(Debug)]
 pub enum CategoryMatch {
@@ -77,6 +77,18 @@ pub struct Args {
     #[cfg(debug_assertions)]
     #[arg(long, value_enum)]
     pub debug_heatmap: Option<DebugHeatmap>,
+
+    /// Run notification loop in the foreground
+    #[arg(short = 'n', long = "notify")]
+    pub notify: bool,
+
+    /// Binary to use for desktop notifications
+    #[arg(long, default_value = "notify-send")]
+    pub notifier: String,
+
+    /// Set notification frequency (day, hour, mon-sun, or 1-31)
+    #[arg(long, value_parser = parse_frequency)]
+    pub frequency: Option<Frequency>,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -120,6 +132,30 @@ impl Args {
             .open(&path)?;
         file.try_lock()?;
         Ok(Database::new(file))
+    }
+}
+
+fn parse_frequency(s: &str) -> std::result::Result<Frequency, String> {
+    match s.to_lowercase().as_str() {
+        "day" => Ok(Frequency::Day),
+        "hour" => Ok(Frequency::Hour),
+        "mon" => Ok(Frequency::DayOfWeek(time::Weekday::Monday)),
+        "tue" => Ok(Frequency::DayOfWeek(time::Weekday::Tuesday)),
+        "wed" => Ok(Frequency::DayOfWeek(time::Weekday::Wednesday)),
+        "thu" => Ok(Frequency::DayOfWeek(time::Weekday::Thursday)),
+        "fri" => Ok(Frequency::DayOfWeek(time::Weekday::Friday)),
+        "sat" => Ok(Frequency::DayOfWeek(time::Weekday::Saturday)),
+        "sun" => Ok(Frequency::DayOfWeek(time::Weekday::Sunday)),
+        _ => {
+            if let Ok(day) = s.parse::<u8>() {
+                if (1..=31).contains(&day) {
+                    return Ok(Frequency::DayOfMonth(day));
+                }
+            }
+            Err(format!(
+                "invalid frequency: '{s}'. expected: day, hour, mon-sun, or 1-31"
+            ))
+        }
     }
 }
 
