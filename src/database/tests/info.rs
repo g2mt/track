@@ -150,7 +150,6 @@ fn write_info_new_line_shorter_shifts_rest() {
         ..Default::default()
     };
     db.write_info(&new_info).unwrap();
-    eprintln!("{:?}", db.backing);
 
     // Verify the entry is still readable via iteration
     let mut iter = db.entries();

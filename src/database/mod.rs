@@ -138,31 +138,33 @@ impl<Backing: Seek + Read + Write> Database<Backing> {
         }
         let first_line_end = first_line_bytes.len();
 
-        let json = serde_json::to_string(info)?;
+        let json = serde_json::to_string(info)?.into_bytes();
         // Total line length (JSON + 1 for \n) must be a multiple of PADDING_SIZE
         let line_len = json.len() + 1;
-        let padded_len = line_len.next_multiple_of(BUFFER_SIZE);
-        let padding = padded_len - line_len;
 
-        let mut new_line = json.into_bytes();
+        let padded_len = line_len.next_multiple_of(BUFFER_SIZE).max(first_line_end);
+        let padding = padded_len - line_len;
+        let mut new_line = json;
         new_line.reserve_exact(padding + 1);
         for _ in 0..padding {
             new_line.push(b' ');
         }
         new_line.push(b'\n');
 
-        if new_line.len() <= first_line_end {
+        if new_line.len() == first_line_end {
             // Overwrite in-place: the old padding (or lack thereof) is replaced by
             // the new content; any leftover old bytes after \n are never read.
             self.backing.seek(std::io::SeekFrom::Start(0))?;
             self.backing.write_all(&new_line)?;
-        } else {
+        } else if new_line.len() > first_line_end {
             // New line is longer than the old one – shift the rest of the file.
             let mut rest = Vec::new();
             self.backing.read_to_end(&mut rest)?;
             self.backing.seek(std::io::SeekFrom::Start(0))?;
             self.backing.write_all(&new_line)?;
             self.backing.write_all(&rest)?;
+        } else {
+            unreachable!();
         }
 
         Ok(())
