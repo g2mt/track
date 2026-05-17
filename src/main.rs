@@ -149,7 +149,7 @@ fn main() -> Result<()> {
         .category
         .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
-    if let Some(daily) = &args.daily {
+    if let Some(daily) = &args.goal {
         return manip::set_daily_goal(
             args.open_database(true)?,
             category,

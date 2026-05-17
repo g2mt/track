@@ -36,7 +36,7 @@ pub struct Args {
     pub categories: bool,
 
     /// List all goals with human-readable durations
-    #[arg(short = 'g', long)]
+    #[arg(long)]
     pub goals: bool,
 
     /// List all notification frequencies
@@ -44,8 +44,8 @@ pub struct Args {
     pub frequencies: bool,
 
     /// Set daily goal for a project (e.g. "1h")
-    #[arg(long)]
-    pub daily: Option<String>,
+    #[arg(short = 'g', long)]
+    pub goal: Option<String>,
 
     /// Align category lines in output
     #[arg(long, default_value = "center")]
