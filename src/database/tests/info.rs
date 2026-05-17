@@ -8,7 +8,7 @@ use super::super::{CategoryData, Database, Info};
 fn write_info_fits_in_place() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
-        categories: BTreeMap::from([("test".into(), CategoryData { goal: None })]),
+        categories: BTreeMap::from([("test".into(), CategoryData::default())]),
     };
     db.write_info(&info).unwrap();
     let content = db.backing.into_inner();
@@ -21,7 +21,7 @@ fn write_info_fits_in_place() {
 #[test]
 fn write_info_new_line_longer_shifts_rest() {
     let old_info = Info {
-        categories: BTreeMap::from([("a".into(), CategoryData { goal: None })]),
+        categories: BTreeMap::from([("a".into(), CategoryData::default())]),
     };
     let mut content = serde_json::to_string(&old_info).unwrap().into_bytes();
     let line_len = content.len() + 1;
@@ -40,6 +40,7 @@ fn write_info_new_line_longer_shifts_rest() {
             "project".into(),
             CategoryData {
                 goal: NonZeroU64::new(3600),
+                ..Default::default()
             },
         )]),
     };
@@ -62,12 +63,14 @@ fn read_info_roundtrip() {
                 "project1".into(),
                 CategoryData {
                     goal: NonZeroU64::new(3600),
+                    ..Default::default()
                 },
             ),
             (
                 "project2".into(),
                 CategoryData {
                     goal: NonZeroU64::new(7200),
+                    ..Default::default()
                 },
             ),
         ]),

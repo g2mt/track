@@ -133,8 +133,8 @@ fn remove_span_removes_middle_entries() {
 
     let info = Info {
         categories: BTreeMap::from([
-            ("a".into(), CategoryData { goal: None }),
-            ("b".into(), CategoryData { goal: None }),
+            ("a".into(), CategoryData::default()),
+            ("b".into(), CategoryData::default()),
         ]),
     };
     db.write_info(&info).unwrap();
@@ -207,8 +207,8 @@ fn remove_span_removes_head_entries() {
 
     let info = Info {
         categories: BTreeMap::from([
-            ("a".into(), CategoryData { goal: None }),
-            ("b".into(), CategoryData { goal: None }),
+            ("a".into(), CategoryData::default()),
+            ("b".into(), CategoryData::default()),
         ]),
     };
     db.write_info(&info).unwrap();
@@ -280,8 +280,8 @@ fn remove_span_removes_tail_entries() {
 
     let info = Info {
         categories: BTreeMap::from([
-            ("a".into(), CategoryData { goal: None }),
-            ("b".into(), CategoryData { goal: None }),
+            ("a".into(), CategoryData::default()),
+            ("b".into(), CategoryData::default()),
         ]),
     };
     db.write_info(&info).unwrap();
