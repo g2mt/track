@@ -1,4 +1,5 @@
 use std::collections::BinaryHeap;
+use std::num::NonZeroU64;
 use std::process::Command;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
@@ -91,7 +92,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
     })?;
 
     let mut db = args.open_database(false)?;
-    let info = db.read_info()?.unwrap_or_default();
+    let mut info = db.read_info()?.unwrap_or_default();
     let mut heap = BinaryHeap::new();
     let now = OffsetDateTime::now_local()?;
 
@@ -102,7 +103,18 @@ pub fn run_daemon(args: Args) -> Result<()> {
                 next_notification: OffsetDateTime::UNIX_EPOCH,
                 freq: freq.clone(),
             };
-            heap.push(item.into_next_notification(now));
+            let item = if let Some(ts) = data.next_notification {
+                match OffsetDateTime::from_unix_timestamp(ts.get() as i64) {
+                    Ok(dt) => ScheduleItem {
+                        next_notification: dt,
+                        ..item
+                    },
+                    Err(_) => item.into_next_notification(now),
+                }
+            } else {
+                item.into_next_notification(now)
+            };
+            heap.push(item);
         }
     }
 
@@ -136,13 +148,22 @@ pub fn run_daemon(args: Args) -> Result<()> {
         }
 
         if let Some(item) = heap.pop() {
+            let cat = item.category.clone();
             if let Err(e) = Command::new(&args.notifier)
                 .arg(item.category.as_ref())
                 .spawn()
             {
-                println!("[{}] failed to spawn notifier: {e}", item.category);
+                println!("[{}] failed to spawn notifier: {e}", cat);
             }
-            heap.push(item.into_next_notification(OffsetDateTime::now_local()?));
+            let next_item = item.into_next_notification(OffsetDateTime::now_local()?);
+            if let Some(data) = info.data_mut(&cat) {
+                data.next_notification =
+                    NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
+                if let Err(e) = db.write_info(&info) {
+                    println!("[{}] failed to save next_notification: {e}", cat);
+                }
+            }
+            heap.push(next_item);
         }
     }
 

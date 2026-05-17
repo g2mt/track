@@ -21,6 +21,8 @@ pub struct CategoryData {
     pub goal: Option<NonZeroU64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notify_every: Option<Frequency>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_notification: Option<NonZeroU64>,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
