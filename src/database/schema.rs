@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 use crate::args::CategoryMatch;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[skip_serializing_none]
 pub struct CategoryData {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub goal: Option<NonZeroU64>,
 }
 
@@ -38,20 +38,14 @@ impl Info {
         self.categories.get_mut(category)
     }
 
-    /// Inserts or replaces the data for a category.
-    pub fn add_data(&mut self, category: Arc<str>, data: CategoryData) {
-        self.categories.insert(category, data);
-    }
-
-    /// Adds a category with no goal set. Returns `true` if the category was newly added.
-    pub fn add_category(&mut self, category: Arc<str>) -> bool {
+    /// Adds a category with no goal set, does not overwite older CategoryData.
+    /// Returns a mutable reference to CategoryData.
+    pub fn add_category(&mut self, category: Arc<str>) -> &mut CategoryData {
         use std::collections::btree_map::Entry;
-        match self.categories.entry(category) {
-            Entry::Vacant(e) => {
-                e.insert(CategoryData { goal: None });
-                true
-            }
-            Entry::Occupied(_) => false,
+        let e = self.categories.entry(category);
+        match e {
+            Entry::Vacant(_) => e.or_insert(CategoryData { goal: None }),
+            Entry::Occupied(occ) => occ.into_mut(),
         }
     }
 

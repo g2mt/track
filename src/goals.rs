@@ -5,7 +5,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use crate::args::Args;
-use crate::database::{CategoryData, Database};
+use crate::database::Database;
 
 pub fn list_goals(mut db: Database<File>) -> Result<()> {
     let info = db.read_info()?.unwrap_or_default();
@@ -23,17 +23,8 @@ pub fn set_daily_goal(args: &Args, category: Arc<str>, daily: &str) -> Result<()
     let mut db = args.open_database(true)?;
     let mut info = db.read_info()?.unwrap_or_default();
     {
-        match info.data_mut(&category) {
-            Some(data) => data.goal = NonZeroU64::new(duration.as_secs()),
-            None => {
-                info.add_data(
-                    category.clone(),
-                    CategoryData {
-                        goal: NonZeroU64::new(duration.as_secs()),
-                    },
-                );
-            }
-        }
+        let data = info.add_category(category.clone());
+        data.goal = NonZeroU64::new(duration.as_secs());
     }
     let style =
         anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));

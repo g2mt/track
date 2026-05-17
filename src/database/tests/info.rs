@@ -12,7 +12,7 @@ fn write_info_fits_in_place() {
     };
     db.write_info(&info).unwrap();
     let content = db.backing.into_inner();
-    assert!(content.starts_with(b"{\"categories\":{\"test\":{\"goal\":null}}}"));
+    assert!(content.starts_with(b"{\"categories\":{\"test\":{}}}"));
     // Line length must be a multiple of 128
     let newline_pos = content.iter().position(|&b| b == b'\n').unwrap();
     assert_eq!((newline_pos + 1) % 128, 0);
@@ -36,7 +36,12 @@ fn write_info_new_line_longer_shifts_rest() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(content));
 
     let new_info = Info {
-        categories: BTreeMap::from([("project".into(), CategoryData { goal: NonZeroU64::new(3600) })]),
+        categories: BTreeMap::from([(
+            "project".into(),
+            CategoryData {
+                goal: NonZeroU64::new(3600),
+            },
+        )]),
     };
     db.write_info(&new_info).unwrap();
 
@@ -53,8 +58,18 @@ fn read_info_roundtrip() {
     let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
     let info = Info {
         categories: BTreeMap::from([
-            ("project1".into(), CategoryData { goal: NonZeroU64::new(3600) }),
-            ("project2".into(), CategoryData { goal: NonZeroU64::new(7200) }),
+            (
+                "project1".into(),
+                CategoryData {
+                    goal: NonZeroU64::new(3600),
+                },
+            ),
+            (
+                "project2".into(),
+                CategoryData {
+                    goal: NonZeroU64::new(7200),
+                },
+            ),
         ]),
     };
     db.write_info(&info).unwrap();
