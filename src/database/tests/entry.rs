@@ -136,6 +136,7 @@ fn remove_span_removes_middle_entries() {
             ("a".into(), CategoryData::default()),
             ("b".into(), CategoryData::default()),
         ]),
+        ..Default::default()
     };
     db.write_info(&info).unwrap();
 
@@ -210,6 +211,7 @@ fn remove_span_removes_head_entries() {
             ("a".into(), CategoryData::default()),
             ("b".into(), CategoryData::default()),
         ]),
+        ..Default::default()
     };
     db.write_info(&info).unwrap();
 
@@ -283,6 +285,7 @@ fn remove_span_removes_tail_entries() {
             ("a".into(), CategoryData::default()),
             ("b".into(), CategoryData::default()),
         ]),
+        ..Default::default()
     };
     db.write_info(&info).unwrap();
 

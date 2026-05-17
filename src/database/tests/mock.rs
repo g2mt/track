@@ -3,10 +3,20 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 use crate::utils::io::Truncate;
 
-#[derive(Debug)]
 pub struct MockFile {
     pub data: RefCell<Vec<u8>>,
     pub pos: u64,
+}
+
+impl std::fmt::Debug for MockFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = self.data.borrow();
+        let s = String::from_utf8_lossy(&data);
+        f.debug_struct("MockFile")
+            .field("data", &s)
+            .field("pos", &self.pos)
+            .finish()
+    }
 }
 
 impl Read for MockFile {

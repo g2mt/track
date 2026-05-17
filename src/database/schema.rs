@@ -27,7 +27,12 @@ pub struct CategoryData {
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]
 pub struct Info {
-    pub(super) categories: BTreeMap<Arc<str>, CategoryData>, // BTreeMap to ensure categories are sorted alphabetically
+    /// Categories stored in the database
+    pub(super) categories: BTreeMap<Arc<str>, CategoryData>,
+    /// Test-only padding data to control serialized line length
+    #[cfg(test)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test_data: Option<Arc<str>>,
 }
 
 impl Info {
