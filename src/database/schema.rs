@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::args::CategoryMatch;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[skip_serializing_none]
 pub struct CategoryData {
     pub goal: Option<NonZeroU64>,
 }
