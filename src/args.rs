@@ -32,15 +32,15 @@ pub struct Args {
     pub file: Option<String>,
 
     /// Print all category names line by line then exit
-    #[arg(long)]
+    #[arg(long, help_heading = "Metadata")]
     pub categories: bool,
 
     /// List all goals with human-readable durations
-    #[arg(long)]
+    #[arg(long, help_heading = "Metadata")]
     pub goals: bool,
 
     /// List all notification frequencies
-    #[arg(long)]
+    #[arg(long, help_heading = "Metadata")]
     pub frequencies: bool,
 
     /// Set daily goal for a project (e.g. "1h")
@@ -48,21 +48,22 @@ pub struct Args {
     pub goal: Option<String>,
 
     /// Align category lines in output
-    #[arg(long, default_value = "center")]
+    #[arg(long, default_value = "center", help_heading = "Metadata")]
     pub align: Align,
 
     #[command(flatten)]
     pub logs: Logs,
 
     /// Start of time range for logs
-    #[arg(long = "from", conflicts_with = "dated_log")]
+    #[arg(long = "from", conflicts_with = "dated_log", help_heading = "Logs")]
     pub from: Option<String>,
 
     /// End of time range for logs
-    #[arg(long = "to", conflicts_with = "dated_log")]
+    #[arg(long = "to", conflicts_with = "dated_log", help_heading = "Logs")]
     pub to: Option<String>,
 
     /// Category name
+    #[arg()]
     pub category: Option<Arc<str>>,
 
     /// Treat category as a regex pattern
@@ -70,11 +71,11 @@ pub struct Args {
     pub regex: bool,
 
     /// Clean mode (delete logs/records instead of showing)
-    #[arg(long)]
+    #[arg(long, help_heading = "Metadata")]
     pub clean: bool,
 
     /// Remove category from info only (goals and category list)
-    #[arg(long = "remove-category")]
+    #[arg(long = "remove-category", help_heading = "Metadata")]
     pub remove_category: bool,
 
     /// Generate shell completion scripts
@@ -87,15 +88,15 @@ pub struct Args {
     pub debug_heatmap: Option<DebugHeatmap>,
 
     /// Run notification loop in the foreground
-    #[arg(short = 'n', long = "notify")]
+    #[arg(short = 'n', long = "notify", help_heading = "Notifications")]
     pub notify: bool,
 
     /// Binary to use for desktop notifications
-    #[arg(long, default_value = "notify-send")]
+    #[arg(long, default_value = "notify-send", help_heading = "Notifications")]
     pub notifier: String,
 
     /// Set notification frequency (day, hour, mon-sun, or 1-31)
-    #[arg(long, value_parser = parse_frequency)]
+    #[arg(long, value_parser = parse_frequency, help_heading = "Notifications")]
     pub frequency: Option<Frequency>,
 }
 
@@ -171,22 +172,22 @@ fn parse_frequency(s: &str) -> std::result::Result<Frequency, String> {
 #[group(id = "dated_log", required = false, multiple = false)]
 pub struct Logs {
     /// Show today's logs
-    #[arg(long)]
+    #[arg(long, help_heading = "Logs")]
     pub today: bool,
 
     /// Show yesterday's logs
-    #[arg(long)]
+    #[arg(long, help_heading = "Logs")]
     pub yesterday: bool,
 
     /// Show this week's logs
-    #[arg(long)]
+    #[arg(long, help_heading = "Logs")]
     pub this_week: bool,
 
     /// Show this month's logs
-    #[arg(long)]
+    #[arg(long, help_heading = "Logs")]
     pub this_month: bool,
 
     /// Show this year's logs
-    #[arg(long)]
+    #[arg(long, help_heading = "Logs")]
     pub this_year: bool,
 }
