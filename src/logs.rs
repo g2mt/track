@@ -104,7 +104,7 @@ pub fn show_logs(args: Args) -> Result<()> {
             TextFragment::Ansi(&date_ansi),
             TextFragment::Raw(&from_s),
             TextFragment::Ansi(&anstyle::Reset),
-            TextFragment::Raw(" .. "),
+            TextFragment::Raw(&" .. "),
             TextFragment::Ansi(&date_ansi),
             TextFragment::Raw(&to_s),
             TextFragment::Ansi(&anstyle::Reset),
@@ -123,7 +123,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         let dur_str = humantime::format_duration(d).to_string();
         align.print(
             &[
-                TextFragment::Raw("  "),
+                TextFragment::Raw(&"  "),
                 TextFragment::Ansi(&bold),
                 TextFragment::Raw(category),
                 TextFragment::Ansi(&reset),
@@ -146,7 +146,7 @@ pub fn show_logs(args: Args) -> Result<()> {
     align.print(
         &[
             TextFragment::Ansi(&blue_bold),
-            TextFragment::Raw("Total time:"),
+            TextFragment::Raw(&"Total time:"),
             TextFragment::Ansi(&anstyle::Reset),
             TextFragment::Raw(&format!(" {}", total_str)),
         ],

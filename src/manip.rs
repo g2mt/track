@@ -31,13 +31,12 @@ pub fn list(args: Args) -> Result<()> {
         .bold();
 
     // Header
-    let total = info.size();
     align.print(
         &[
             TextFragment::Ansi(&blue_bold),
-            TextFragment::Raw("Total: "),
+            TextFragment::Raw(&"Total: "),
             TextFragment::Ansi(&reset),
-            TextFragment::Raw(&total.to_string()),
+            TextFragment::Raw(&info.len()),
         ],
         terminal_width,
     );
@@ -50,7 +49,7 @@ pub fn list(args: Args) -> Result<()> {
         }
         align.print(
             &[
-                TextFragment::Raw("  "),
+                TextFragment::Raw(&"  "),
                 TextFragment::Ansi(&bold),
                 TextFragment::Raw(category),
                 TextFragment::Ansi(&reset),

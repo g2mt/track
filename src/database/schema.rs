@@ -40,7 +40,7 @@ impl Info {
     }
 
     /// Returns the number of categories.
-    pub fn size(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.categories.len()
     }
 
