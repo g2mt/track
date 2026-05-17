@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-use crate::io_utils::Truncate;
+use crate::utils::io::Truncate;
 
 #[derive(Debug)]
 pub struct MockFile {

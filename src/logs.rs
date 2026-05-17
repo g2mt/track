@@ -7,7 +7,7 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
-use crate::cli;
+use crate::utils::cli;
 use crate::database::Database;
 use crate::heatmap::durations::HeatmapDurations;
 

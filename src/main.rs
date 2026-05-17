@@ -11,16 +11,14 @@ use args::Args;
 use args::DebugHeatmap;
 
 mod align;
-mod cli;
 mod database;
 use database::CategoryData;
 mod heatmap;
-mod io_utils;
 mod logs;
 mod manip;
 mod notify;
-mod time_utils;
 mod track;
+mod utils;
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -111,25 +109,25 @@ fn main() -> Result<()> {
     let mut log_from: Option<OffsetDateTime> = None;
     let mut log_to: Option<OffsetDateTime> = None;
     if args.logs.today {
-        log_from = Some(time_utils::today()?);
+        log_from = Some(utils::time::today()?);
     } else if args.logs.yesterday {
-        log_from = Some(time_utils::yesterday()?);
+        log_from = Some(utils::time::yesterday()?);
     } else if args.logs.this_week {
-        log_from = Some(time_utils::this_week()?);
+        log_from = Some(utils::time::this_week()?);
     } else if args.logs.this_month {
-        log_from = Some(time_utils::this_month()?);
+        log_from = Some(utils::time::this_month()?);
     } else if args.logs.this_year {
-        log_from = Some(time_utils::this_year()?);
+        log_from = Some(utils::time::this_year()?);
     } else if args.from.is_some() || args.to.is_some() {
         log_from = args
             .from
             .as_deref()
-            .map(time_utils::parse_datetime)
+            .map(utils::time::parse_datetime)
             .transpose()?;
         log_to = args
             .to
             .as_deref()
-            .map(time_utils::parse_datetime)
+            .map(utils::time::parse_datetime)
             .transpose()?;
     }
     if log_from.is_some() || log_to.is_some() {

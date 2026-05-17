@@ -9,7 +9,7 @@ pub mod schema;
 pub use schema::{CategoryData, Entry, Frequency, Info};
 use time::OffsetDateTime;
 
-use crate::io_utils::Truncate;
+use crate::utils::io::Truncate;
 
 #[cfg(test)]
 mod tests;

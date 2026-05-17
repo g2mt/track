@@ -7,7 +7,7 @@ use humantime::format_duration;
 use terminal_size::terminal_size;
 
 use crate::database::{Database, Entry};
-use crate::time_utils;
+use crate::utils;
 
 pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> {
     let mut info = db.read_info()?.unwrap_or_default();
@@ -25,7 +25,7 @@ pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> 
     let start = SystemTime::now();
     let mut elapsed = Duration::default();
     // Load initial elapsed from today's entries for this category
-    let today_start = time_utils::today()?;
+    let today_start = utils::time::today()?;
     for res in db.latest_entries_range(today_start..) {
         let (_, entry) = res?;
         if entry.category.as_ref() == category.as_ref() {
