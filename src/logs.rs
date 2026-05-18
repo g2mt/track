@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs::File;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -7,12 +6,12 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
-use crate::database::Database;
+use crate::database::MainDatabase;
 use crate::heatmap::durations::HeatmapDurations;
 use crate::utils::cli;
 
 pub struct Args {
-    pub db: Database<File>,
+    pub db: MainDatabase,
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub category_match: Option<CategoryMatch>,

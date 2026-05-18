@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::io::Cursor;
 use std::num::NonZeroU64;
 use std::sync::{Arc, LazyLock};
 
@@ -11,13 +10,16 @@ static TEST_DATA_PADDING: LazyLock<Arc<str>> = LazyLock::new(|| Arc::from("X".re
 
 #[test]
 fn write_info_fits_in_place() {
-    let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
     let info = Info {
         categories: BTreeMap::from([("test".into(), CategoryData::default())]),
         ..Default::default()
     };
     db.write_info(&info).unwrap();
-    let content = db.backing.into_inner();
+    let content = db.backing.data.borrow();
     assert!(content.starts_with(b"{\"categories\":{\"test\":{}}}"));
     // Line length must be a multiple of 128
     let newline_pos = content.iter().position(|&b| b == b'\n').unwrap();
@@ -26,7 +28,10 @@ fn write_info_fits_in_place() {
 
 #[test]
 fn read_info_roundtrip() {
-    let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
     let info = Info {
         categories: BTreeMap::from([
             (
@@ -53,17 +58,23 @@ fn read_info_roundtrip() {
 
 #[test]
 fn read_info_empty_file() {
-    let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
     let result = db.read_info();
     assert!(result.unwrap().is_none());
 }
 
 #[test]
 fn write_info_empty_file() {
-    let mut db: Database<Cursor<Vec<u8>>> = Database::new(Cursor::new(vec![]));
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
     let info = Info::default();
     db.write_info(&info).unwrap();
-    let content = db.backing.into_inner();
+    let content = db.backing.data.borrow();
     assert!(!content.is_empty());
     let newline_pos = content.iter().position(|&b| b == b'\n').unwrap();
     assert_eq!((newline_pos + 1) % 128, 0);

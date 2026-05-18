@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::collections::BTreeMap;
-use std::num::NonZeroU64;
 
 use super::super::{CategoryData, Database, Entry, Info, Span};
 use super::mock::MockFile;

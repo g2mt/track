@@ -1,5 +1,4 @@
 use std::collections::BinaryHeap;
-use std::fs::File;
 use std::num::NonZeroU64;
 use std::process::Command;
 use std::sync::{Arc, Condvar, Mutex};
@@ -8,7 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use time::{OffsetDateTime, Time};
 
-use crate::database::{Database, Frequency};
+use crate::database::{Frequency, MainDatabase};
 
 fn command_exists(cmd: &str) -> bool {
     if cmd.contains('/') {
@@ -79,7 +78,7 @@ impl Ord for ScheduleItem {
 }
 
 pub struct Args<'a> {
-    pub db: Database<File>,
+    pub db: MainDatabase,
     pub notifier: &'a str,
 }
 

@@ -6,21 +6,23 @@ use anyhow::Result;
 use humantime::format_duration;
 use terminal_size::terminal_size;
 
-use crate::database::{Database, Entry};
+use crate::database::{Entry, MainDatabase};
 use crate::utils;
 
-pub fn track(mut db: Database<std::fs::File>, category: Arc<str>) -> Result<()> {
+pub fn track(mut db: MainDatabase, category: Arc<str>) -> Result<()> {
     let mut info = db.read_info()?.unwrap_or_default();
     info.add_category(category.clone());
     db.write_info(&info)?;
 
     let pair = Arc::new((Mutex::new(false), Condvar::new()));
-    let p = pair.clone();
-    ctrlc::set_handler(move || {
-        let (lock, cvar) = &*p;
-        *lock.lock().unwrap() = true;
-        cvar.notify_one();
-    })?;
+    {
+        let p = pair.clone();
+        ctrlc::set_handler(move || {
+            let (lock, cvar) = &*p;
+            *lock.lock().unwrap() = true;
+            cvar.notify_one();
+        })?;
+    }
 
     let start = SystemTime::now();
     let mut elapsed = Duration::default();

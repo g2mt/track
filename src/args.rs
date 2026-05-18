@@ -1,4 +1,3 @@
-use std::fs::File;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -7,7 +6,8 @@ use clap_complete::Shell;
 use regex::Regex;
 
 use crate::align::Align;
-use crate::database::{Database, Frequency};
+use crate::database::{Frequency, MainDatabase};
+use crate::utils::io::FileWithPath;
 
 #[derive(Debug)]
 pub enum CategoryMatch {
@@ -128,7 +128,7 @@ impl Args {
             .transpose()
     }
 
-    pub fn open_database(&self, write: bool) -> Result<Database<File>> {
+    pub fn open_database(&self, write: bool) -> Result<MainDatabase> {
         let path = self
             .file
             .as_ref()
@@ -140,13 +140,10 @@ impl Args {
             std::fs::copy(&path, &bak)?;
         }
 
-        let file = std::fs::OpenOptions::new()
-            .read(true)
-            .write(write)
-            .create(write)
-            .open(&path)?;
-        file.try_lock()?;
-        Ok(Database::new(file))
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(write).create(write);
+        let db_file = FileWithPath::open(path, &options)?;
+        Ok(MainDatabase::new(db_file))
     }
 }
 

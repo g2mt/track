@@ -1,14 +1,13 @@
-use std::fs::File;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
 use anyhow::Result;
 
 use crate::align::{Align, TextFragment};
-use crate::database::{CategoryData, Database, Frequency};
+use crate::database::{CategoryData, Frequency, MainDatabase};
 
 pub struct Args {
-    pub db: Database<File>,
+    pub db: MainDatabase,
     pub align: Align,
     pub printer: fn(&CategoryData) -> String,
 }
@@ -64,7 +63,7 @@ pub fn list(args: Args) -> Result<()> {
 }
 
 pub fn set_daily_goal(
-    mut db: Database<File>,
+    mut db: MainDatabase,
     category: Arc<str>,
     daily: &str,
     frequency: Option<&Frequency>,
@@ -93,7 +92,7 @@ pub fn set_daily_goal(
     Ok(())
 }
 
-pub fn set_frequency(mut db: Database<File>, category: Arc<str>, freq: Frequency) -> Result<()> {
+pub fn set_frequency(mut db: MainDatabase, category: Arc<str>, freq: Frequency) -> Result<()> {
     let mut info = db.read_info()?.unwrap_or_default();
     {
         let data = info.add_category(category.clone());
