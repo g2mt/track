@@ -10,7 +10,7 @@ SHAREDIR ?= $(PREFIX)/share
 SYSTEMD_DIR ?= $(PREFIX)/lib/systemd/user
 endif
 
-.PHONY: install install_systemd clean
+.PHONY: target/release/track install install_systemd clean
 
 target/release/track:
 	cargo build --release
