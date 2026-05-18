@@ -44,7 +44,7 @@ fn main() -> Result<()> {
 
     if args.notify {
         return notify::run_daemon(notify::Args {
-            mdb: args.open_database(true)?.into(),
+            db: args.open_database(true)?.into(),
             notifier: &args.notifier,
         });
     }
@@ -158,15 +158,44 @@ fn main() -> Result<()> {
         .category
         .clone()
         .ok_or_else(|| anyhow::anyhow!("missing category for tracking"))?;
+
     if let Some(daily) = &args.goal {
-        return manip::set_daily_goal(
+        manip::set_daily_goal(
             args.open_database(true)?,
             category,
             daily,
             args.frequency.as_ref(),
-        );
+        )
     } else if let Some(ref freq) = args.frequency {
-        return manip::set_frequency(args.open_database(true)?, category, freq.clone());
+        manip::set_frequency(args.open_database(true)?, category, freq.clone())
+    } else if args.reset_notification {
+        let cm = args.category_match()?.unwrap();
+        let mut db = args.open_database(true)?;
+        let mut info = db.read_info()?.unwrap_or_default();
+        let mut found = false;
+        let today_midnight = OffsetDateTime::now_local()?
+            .replace_time(time::Time::MIDNIGHT)
+            .unix_timestamp() as u64;
+        for (cat, data) in info.iter_mut() {
+            if cm.matches(cat) {
+                data.next_notification = std::num::NonZeroU64::new(today_midnight);
+                found = true;
+                if std::io::stdout().is_terminal() {
+                    println!(
+                        "Reset notification for {}{}{}",
+                        anstyle::Style::new()
+                            .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow))),
+                        cat,
+                        anstyle::Reset,
+                    );
+                }
+            }
+        }
+        if !found {
+            return Err(anyhow::anyhow!("Category not found: {}", category));
+        }
+        db.write_info(&info)?;
+        Ok(())
     } else if args.remove_category {
         let cm = args.category_match()?.unwrap();
         let mut db = args.open_database(true)?;

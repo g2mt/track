@@ -38,6 +38,10 @@ impl FileWithPath {
     pub fn into_open_args(self) -> (PathBuf, std::fs::OpenOptions) {
         self.open_args
     }
+
+    pub fn unlock(&self) -> io::Result<()> {
+        self.file.unlock()
+    }
 }
 
 impl Seek for FileWithPath {

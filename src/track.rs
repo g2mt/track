@@ -6,10 +6,10 @@ use anyhow::Result;
 use humantime::format_duration;
 use terminal_size::terminal_size;
 
-use crate::database::{Entry, SingleThreadedDb};
+use crate::database::{Entry, NormalDb};
 use crate::utils;
 
-pub fn track(mut db: SingleThreadedDb, category: Arc<str>) -> Result<()> {
+pub fn track(mut db: NormalDb, category: Arc<str>) -> Result<()> {
     let mut info = db.read_info()?.unwrap_or_default();
     info.add_category(category.clone());
     db.write_info(&info)?;

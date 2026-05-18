@@ -6,14 +6,9 @@ pub mod schema;
 #[cfg(test)]
 mod tests;
 
-use std::error::Error;
-use std::fmt::Display;
 use std::ops::{Deref, DerefMut};
-use std::path::PathBuf;
-use std::sync::Arc;
 
 pub use base::Database;
-use parking_lot::{MappedMutexGuard, Mutex, MutexGuard};
 pub use schema::{CategoryData, Entry, Frequency, Info};
 
 use crate::utils::io::traits::Changeable;
@@ -41,113 +36,61 @@ impl Span {
 
 pub const BUFFER_SIZE: usize = 128;
 
-pub trait MainDatabase: Deref<Target = Database<FileWithPath>> {
-    fn new(file: FileWithPath) -> Self;
-}
+pub type NormalDb = Database<FileWithPath>;
 
-pub struct SingleThreadedDb {
+pub struct ReloadableDb {
     db: Database<FileWithPath>,
+    unlocked: bool,
 }
 
-impl MainDatabase for SingleThreadedDb {
-    fn new(file: FileWithPath) -> Self {
-        Self {
-            db: Database::new(file),
+impl ReloadableDb {
+    pub fn reload(mut self) -> std::io::Result<(Self, bool)> {
+        if self.db.backing.changed() {
+            let (path, options) = self.db.backing.into_open_args();
+            let file = FileWithPath::open(path, options)?;
+            self.db = Database::new(file);
+            self.unlocked = false;
+            Ok((self, true))
+        } else {
+            Ok((self, false))
+        }
+    }
+
+    pub fn unlock(&mut self) -> std::io::Result<()> {
+        if self.unlocked {
+            return Ok(());
+        }
+        self.db.backing.unlock()?;
+        self.unlocked = true;
+        Ok(())
+    }
+}
+
+impl Into<ReloadableDb> for NormalDb {
+    fn into(self) -> ReloadableDb {
+        ReloadableDb {
+            db: self,
+            unlocked: false,
         }
     }
 }
 
-impl DerefMut for SingleThreadedDb {
+impl DerefMut for ReloadableDb {
     fn deref_mut(&mut self) -> &mut Self::Target {
+        if self.unlocked {
+            panic!("dereferencing unlocked ReloadableDb");
+        }
         &mut self.db
     }
 }
 
-impl Deref for SingleThreadedDb {
+impl Deref for ReloadableDb {
     type Target = Database<FileWithPath>;
 
     fn deref(&self) -> &Self::Target {
-        &self.db
-    }
-}
-
-enum MultiThreadedDbState {
-    Loaded(Database<FileWithPath>),
-    Unloaded((PathBuf, std::fs::OpenOptions)),
-    Indeterminate,
-}
-
-pub struct MultiThreadedDb {
-    state: Mutex<MultiThreadedDbState>,
-}
-
-#[derive(Debug)]
-pub struct DatabaseChanged;
-
-impl Display for DatabaseChanged {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("database changed, reload is needed")
-    }
-}
-
-impl Error for DatabaseChanged {}
-
-impl MultiThreadedDb {
-    pub fn lock<'a>(
-        &'a self,
-    ) -> Result<MappedMutexGuard<'a, Database<FileWithPath>>, DatabaseChanged> {
-        let guard = self.state.lock();
-        MutexGuard::try_map(guard, |state| {
-            if let MultiThreadedDbState::Loaded(loaded) = state {
-                Some(loaded)
-            } else {
-                None
-            }
-        })
-        .or(Err(DatabaseChanged {}))
-    }
-
-    pub fn reload<'a>(&'a self) -> std::io::Result<MappedMutexGuard<'a, Database<FileWithPath>>> {
-        let guard = self.state.lock();
-        MutexGuard::try_map_or_err(guard, |state| {
-            if let MultiThreadedDbState::Unloaded((path, options)) =
-                std::mem::replace(state, MultiThreadedDbState::Indeterminate)
-            {
-                let backing = FileWithPath::open(path, options)?;
-                *state = MultiThreadedDbState::Loaded(Database::new(backing));
-                if let MultiThreadedDbState::Loaded(db) = state {
-                    Ok(db)
-                } else {
-                    unreachable!()
-                }
-            } else {
-                panic!("reloading presently loaded");
-            }
-        })
-        .map_err(|(_, e)| e)
-    }
-
-    pub fn take_if_changed(&self) -> bool {
-        let mut state = self.state.lock();
-        match std::mem::replace(&mut *state, MultiThreadedDbState::Indeterminate) {
-            MultiThreadedDbState::Loaded(db) => {
-                if db.backing.changed() {
-                    *state = MultiThreadedDbState::Unloaded(db.backing.into_open_args());
-                    return true;
-                }
-            }
-            other => {
-                *state = other;
-            }
+        if self.unlocked {
+            panic!("dereferencing unlocked ReloadableDb");
         }
-        false
-    }
-}
-
-impl Into<Arc<MultiThreadedDb>> for SingleThreadedDb {
-    fn into(self) -> Arc<MultiThreadedDb> {
-        Arc::new(MultiThreadedDb {
-            state: Mutex::new(MultiThreadedDbState::Loaded(self.db)),
-        })
+        &self.db
     }
 }

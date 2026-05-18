@@ -41,6 +41,11 @@ impl Info {
         self.categories.iter()
     }
 
+    /// Returns an iterator over (category_name, mutable category_data) pairs.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Arc<str>, &mut CategoryData)> {
+        self.categories.iter_mut()
+    }
+
     /// Returns an iterator over category names.
     pub fn keys(&self) -> impl Iterator<Item = &Arc<str>> {
         self.categories.keys()

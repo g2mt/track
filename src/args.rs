@@ -6,7 +6,7 @@ use clap_complete::Shell;
 use regex::Regex;
 
 use crate::align::Align;
-use crate::database::{Frequency, MainDatabase, SingleThreadedDb};
+use crate::database::{Frequency, NormalDb};
 use crate::utils::io::FileWithPath;
 
 #[derive(Debug)]
@@ -98,6 +98,10 @@ pub struct Args {
     /// Set notification frequency (day, hour, mon-sun, or 1-31)
     #[arg(long, value_parser = parse_frequency, help_heading = "Notifications")]
     pub frequency: Option<Frequency>,
+
+    /// Reset the next notification time for a category
+    #[arg(long = "reset-notification", help_heading = "Notifications")]
+    pub reset_notification: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
@@ -128,7 +132,7 @@ impl Args {
             .transpose()
     }
 
-    pub fn open_database(&self, write: bool) -> Result<SingleThreadedDb> {
+    pub fn open_database(&self, write: bool) -> Result<NormalDb> {
         let path = self
             .file
             .as_ref()
@@ -143,7 +147,7 @@ impl Args {
         let mut options = std::fs::OpenOptions::new();
         options.read(true).write(write).create(write);
         let db_file = FileWithPath::open(path, options)?;
-        Ok(SingleThreadedDb::new(db_file))
+        Ok(NormalDb::new(db_file))
     }
 }
 
