@@ -1,0 +1,11 @@
+[Unit]
+Description=track notification daemon
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env track -n
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
