@@ -1,11 +1,10 @@
 use std::collections::BinaryHeap;
 use std::num::NonZeroU64;
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
 
 use anyhow::Result;
-use parking_lot::{Condvar, Mutex};
 use time::{OffsetDateTime, Time};
 
 use crate::database::{Frequency, Info, ReloadableDb};
@@ -121,7 +120,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
         let exited = exited.clone();
         ctrlc::set_handler(move || {
             let (mtx, cvar) = &*exited;
-            *mtx.lock() = true;
+            *mtx.lock().unwrap() = true;
             cvar.notify_all();
         })?;
     }
@@ -149,11 +148,12 @@ pub fn run_daemon(args: Args) -> Result<()> {
         ReloadableDb::unlock(&mut db)?; // unlock to allow changes from other processes
 
         // Wait for exit signal or reload timeout
-        let mut state = mtx.lock();
+        let mut state = mtx.lock().unwrap();
         if *state {
             break;
         }
-        cvar.wait_for(&mut state, Duration::from_secs(1));
+        let wait_result = cvar.wait_timeout(state, Duration::from_secs(1)).unwrap();
+        state = wait_result.0;
         if *state {
             break;
         }
