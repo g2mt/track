@@ -2,17 +2,81 @@ use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::str::FromStr;
 use time::Weekday;
 
 use crate::args::CategoryMatch;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Frequency {
     Day,
     Hour,
     DayOfWeek(Weekday),
     DayOfMonth(u8),
+}
+
+impl Serialize for Frequency {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            Frequency::Day => serializer.serialize_str("day"),
+            Frequency::Hour => serializer.serialize_str("hour"),
+            Frequency::DayOfWeek(wd) => {
+                let s = match wd {
+                    Weekday::Monday => "mon",
+                    Weekday::Tuesday => "tue",
+                    Weekday::Wednesday => "wed",
+                    Weekday::Thursday => "thu",
+                    Weekday::Friday => "fri",
+                    Weekday::Saturday => "sat",
+                    Weekday::Sunday => "sun",
+                };
+                serializer.serialize_str(s)
+            }
+            Frequency::DayOfMonth(day) => serializer.serialize_str(&day.to_string()),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Frequency {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl FromStr for Frequency {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "day" => Ok(Frequency::Day),
+            "hour" => Ok(Frequency::Hour),
+            "mon" => Ok(Frequency::DayOfWeek(Weekday::Monday)),
+            "tue" => Ok(Frequency::DayOfWeek(Weekday::Tuesday)),
+            "wed" => Ok(Frequency::DayOfWeek(Weekday::Wednesday)),
+            "thu" => Ok(Frequency::DayOfWeek(Weekday::Thursday)),
+            "fri" => Ok(Frequency::DayOfWeek(Weekday::Friday)),
+            "sat" => Ok(Frequency::DayOfWeek(Weekday::Saturday)),
+            "sun" => Ok(Frequency::DayOfWeek(Weekday::Sunday)),
+            _ => {
+                if let Ok(day) = s.parse::<u8>() {
+                    if (1..=31).contains(&day) {
+                        return Ok(Frequency::DayOfMonth(day));
+                    }
+                }
+                Err(format!(
+                    "invalid frequency: '{s}'. expected: day, hour, mon-sun, or 1-31"
+                ))
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]

@@ -96,7 +96,7 @@ pub struct Args {
     pub notifier: String,
 
     /// Set notification frequency (day, hour, mon-sun, or 1-31)
-    #[arg(long, value_parser = parse_frequency, help_heading = "Notifications")]
+    #[arg(long, help_heading = "Notifications")]
     pub frequency: Option<Frequency>,
 
     /// Reset the next notification time for a category
@@ -148,30 +148,6 @@ impl Args {
         options.read(true).write(write).create(write);
         let db_file = FileWithPath::open(path, options)?;
         Ok(NormalDb::new(db_file))
-    }
-}
-
-fn parse_frequency(s: &str) -> std::result::Result<Frequency, String> {
-    match s.to_lowercase().as_str() {
-        "day" => Ok(Frequency::Day),
-        "hour" => Ok(Frequency::Hour),
-        "mon" => Ok(Frequency::DayOfWeek(time::Weekday::Monday)),
-        "tue" => Ok(Frequency::DayOfWeek(time::Weekday::Tuesday)),
-        "wed" => Ok(Frequency::DayOfWeek(time::Weekday::Wednesday)),
-        "thu" => Ok(Frequency::DayOfWeek(time::Weekday::Thursday)),
-        "fri" => Ok(Frequency::DayOfWeek(time::Weekday::Friday)),
-        "sat" => Ok(Frequency::DayOfWeek(time::Weekday::Saturday)),
-        "sun" => Ok(Frequency::DayOfWeek(time::Weekday::Sunday)),
-        _ => {
-            if let Ok(day) = s.parse::<u8>() {
-                if (1..=31).contains(&day) {
-                    return Ok(Frequency::DayOfMonth(day));
-                }
-            }
-            Err(format!(
-                "invalid frequency: '{s}'. expected: day, hour, mon-sun, or 1-31"
-            ))
-        }
     }
 }
 
