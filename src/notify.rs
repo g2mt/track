@@ -160,7 +160,29 @@ pub fn run_daemon(args: Args) -> Result<()> {
             {
                 println!("[{cat}] failed to spawn notifier: {e}");
             }
-            let next_item = item.into_next_notification(OffsetDateTime::now_local()?);
+            let done_today = {
+                let now = OffsetDateTime::now_local()?;
+                let today_start = now.replace_time(Time::MIDNIGHT);
+                let today_end = today_start.saturating_add(time::Duration::DAY);
+                let start = today_start.unix_timestamp() as u64;
+                let end = today_end.unix_timestamp() as u64;
+                let mut iter = db.entries();
+                iter.any(|r| match r {
+                    Ok((_, entry)) => {
+                        entry.category == cat && entry.start_time >= start && entry.start_time < end
+                    }
+                    Err(_) => false,
+                })
+            };
+            let next_item = if !done_today {
+                let mut item = item;
+                item.next_notification = OffsetDateTime::now_local()?
+                    .truncate_to_hour()
+                    .saturating_add(time::Duration::hours(1));
+                item
+            } else {
+                item.into_next_notification(OffsetDateTime::now_local()?)
+            };
             if let Some(data) = info.data_mut(&cat) {
                 data.next_notification =
                     NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
