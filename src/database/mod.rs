@@ -6,7 +6,6 @@ pub mod schema;
 #[cfg(test)]
 mod tests;
 
-use std::fs::TryLockError;
 use std::ops::{Deref, DerefMut};
 
 use anyhow::Result;

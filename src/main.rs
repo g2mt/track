@@ -221,6 +221,6 @@ fn main() -> Result<()> {
         Ok(())
     } else {
         let db = args.open_database(true)?;
-        track::track(db, category)
+        track::track(db.try_into()?, category)
     }
 }

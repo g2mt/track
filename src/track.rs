@@ -6,14 +6,10 @@ use anyhow::Result;
 use humantime::format_duration;
 use terminal_size::terminal_size;
 
-use crate::database::{Entry, NormalDb};
+use crate::database::{Entry, ReloadableDb};
 use crate::utils;
 
-pub fn track(mut db: NormalDb, category: Arc<str>) -> Result<()> {
-    let mut info = db.read_info()?.unwrap_or_default();
-    info.add_category(category.clone());
-    db.write_info(&info)?;
-
+pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
     let pair = Arc::new((Mutex::new(false), Condvar::new()));
     {
         let p = pair.clone();
@@ -26,27 +22,38 @@ pub fn track(mut db: NormalDb, category: Arc<str>) -> Result<()> {
 
     let start = SystemTime::now();
     let mut elapsed = Duration::default();
-    // Load initial elapsed from today's entries for this category
-    let today_start = utils::time::today()?;
-    for res in db.latest_entries_range(today_start..) {
-        let (_, entry) = res?;
-        if entry.category.as_ref() == category.as_ref() {
-            elapsed += Duration::from_secs(entry.end_time - entry.start_time);
-        }
-    }
-    let max_secs = info
-        .data(&category)
-        .and_then(|d| d.goal)
-        .map(|n| n.get())
-        .unwrap_or(3600) as f64;
-
-    let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+    let mut max_secs = 0.0f64;
     let mut db_entry = Entry {
         category: category.clone(),
-        start_time,
-        end_time: start_time,
+        start_time: 0,
+        end_time: 0,
     };
-    db.append_entry(&db_entry)?;
+    db.try_lock(|db| {
+        let mut info = db.read_info()?.unwrap_or_default();
+        info.add_category(category.clone());
+        db.write_info(&info)?;
+
+        // Load initial elapsed from today's entries for this category
+        let today_start = utils::time::today()?;
+        for res in db.latest_entries_range(today_start..) {
+            let (_, entry) = res?;
+            if entry.category.as_ref() == category.as_ref() {
+                elapsed += Duration::from_secs(entry.end_time - entry.start_time);
+            }
+        }
+        max_secs = info
+            .data(&category)
+            .and_then(|data| data.goal)
+            .map(|goal| goal.get())
+            .unwrap_or(3600) as f64;
+
+        let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+        db_entry.start_time = start_time;
+        db_entry.end_time = start_time;
+        db.append_entry(&db_entry)?;
+
+        Ok(())
+    })?;
 
     let (lock, cvar) = &*pair;
     let mut stop = lock.lock().unwrap();
@@ -103,7 +110,10 @@ pub fn track(mut db: NormalDb, category: Arc<str>) -> Result<()> {
                 .duration_since(std::time::UNIX_EPOCH)?
                 .as_secs();
             db_entry.end_time = end_time;
-            db.update_last_entry(&db_entry)?;
+            db.try_lock(|db| {
+                db.update_last_entry(&db_entry)?;
+                Ok(())
+            })?;
         }
     }
     drop(stop);
@@ -112,8 +122,10 @@ pub fn track(mut db: NormalDb, category: Arc<str>) -> Result<()> {
     let end_time = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
-    db_entry.end_time = end_time;
-    db.update_last_entry(&db_entry)?;
+    db.try_lock(|db| {
+        db_entry.end_time = end_time;
+        db.update_last_entry(&db_entry)
+    })?;
 
     // Move past the progress bar line
     print!("\n");
