@@ -126,10 +126,9 @@ pub fn run_daemon(args: Args) -> Result<()> {
     }
 
     let mut db = args.db;
-    let mut info = db.read_info()?.unwrap_or_default();
+    let mut info = db.try_lock(|db| Ok(db.read_info()?.unwrap_or_default()))?;
     let now = OffsetDateTime::now_local()?;
     let mut heap = build_heap(&info, now);
-    ReloadableDb::unlock(&mut db)?;
 
     if heap.is_empty() {
         println!("No categories with set frequency.");
@@ -145,8 +144,6 @@ pub fn run_daemon(args: Args) -> Result<()> {
 
     let (mtx, cvar) = &*exited;
     loop {
-        db.unlock()?; // unlock to allow changes from other processes
-
         // Wait for exit signal or reload timeout
         let mut state = mtx.lock().unwrap();
         if *state {
@@ -162,7 +159,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
         (db, reloaded) = db.reload()?;
         if reloaded {
             println!("[{}] reloaded", OffsetDateTime::now_local()?);
-            info = db.read_info()?.unwrap_or_default();
+            info = db.try_lock(|db| Ok(db.read_info()?.unwrap_or_default()))?;
         }
         let now = OffsetDateTime::now_local()?;
         heap = build_heap(&info, now);
@@ -187,48 +184,50 @@ pub fn run_daemon(args: Args) -> Result<()> {
             println!("{cat}: failed to spawn notifier: {e}");
         }
 
-        // Write to database and update notification times
-        db.try_lock()?;
-        let done_today = {
-            let now = OffsetDateTime::now_local()?;
-            let today_start = now.replace_time(Time::MIDNIGHT);
-            let today_end = today_start.saturating_add(time::Duration::DAY);
-            let start = today_start.unix_timestamp() as u64;
-            let end = today_end.unix_timestamp() as u64;
-            let mut iter = db.entries();
-            let done_today = iter.any(|r| match r {
-                Ok((_, entry)) => {
-                    entry.category == cat && entry.start_time >= start && entry.start_time < end
-                }
-                Err(_) => false,
-            });
-            done_today
-        };
-        let next_item = if !done_today {
-            let mut item = item;
-            item.next_notification = OffsetDateTime::now_local()?
-                .truncate_to_hour()
-                .saturating_add(time::Duration::hours(1));
-            item
-        } else {
-            item.into_next_notification(OffsetDateTime::now_local()?)
-        };
+        db.try_lock(|db| {
+            // Write to database and update notification times
+            let done_today = {
+                let now = OffsetDateTime::now_local()?;
+                let today_start = now.replace_time(Time::MIDNIGHT);
+                let today_end = today_start.saturating_add(time::Duration::DAY);
+                let start = today_start.unix_timestamp() as u64;
+                let end = today_end.unix_timestamp() as u64;
+                let mut iter = db.entries();
+                let done_today = iter.any(|r| match r {
+                    Ok((_, entry)) => {
+                        entry.category == cat && entry.start_time >= start && entry.start_time < end
+                    }
+                    Err(_) => false,
+                });
+                done_today
+            };
+            let next_item = if !done_today {
+                let mut item = item;
+                item.next_notification = OffsetDateTime::now_local()?
+                    .truncate_to_hour()
+                    .saturating_add(time::Duration::hours(1));
+                item
+            } else {
+                item.into_next_notification(OffsetDateTime::now_local()?)
+            };
 
-        // Record next notification time
-        if let Some(data) = info.data_mut(&cat) {
-            data.next_notification =
-                NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
-            if let Err(e) = db.write_info(&info) {
-                println!("{cat}: failed to save next_notification: {e}");
+            // Record next notification time
+            if let Some(data) = info.data_mut(&cat) {
+                data.next_notification =
+                    NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
+                if let Err(e) = db.write_info(&info) {
+                    println!("{cat}: failed to save next_notification: {e}");
+                }
             }
-        }
-        println!(
-            "[{}] next {} on {}",
-            OffsetDateTime::now_local()?,
-            next_item.category,
-            next_item.next_notification
-        );
-        heap.push(next_item);
+            println!(
+                "[{}] next {} on {}",
+                OffsetDateTime::now_local()?,
+                next_item.category,
+                next_item.next_notification
+            );
+            heap.push(next_item);
+            Ok(())
+        })?;
     }
 
     Ok(())

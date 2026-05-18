@@ -9,6 +9,7 @@ mod tests;
 use std::fs::TryLockError;
 use std::ops::{Deref, DerefMut};
 
+use anyhow::Result;
 pub use base::Database;
 pub use schema::{CategoryData, Entry, Frequency, Info};
 
@@ -41,7 +42,7 @@ pub type NormalDb = Database<FileWithPath>;
 
 pub struct ReloadableDb {
     db: Database<FileWithPath>,
-    unlocked: bool,
+    locked: bool,
 }
 
 impl ReloadableDb {
@@ -49,42 +50,46 @@ impl ReloadableDb {
         if self.db.backing.changed() {
             let (path, options) = self.db.backing.into_open_args();
             let file = FileWithPath::open(path, options)?;
+            file.unlock()?;
             self.db = Database::new(file);
-            self.unlocked = false;
+            self.locked = false;
             Ok((self, true))
         } else {
             Ok((self, false))
         }
     }
 
-    pub fn unlock(&mut self) -> std::io::Result<()> {
-        if self.unlocked {
-            return Ok(());
+    pub fn try_lock<F, R>(&mut self, f: F) -> Result<R>
+    where
+        F: FnOnce(&mut Self) -> Result<R>,
+    {
+        if self.locked {
+            panic!("nested try_lock");
         }
-        self.db.backing.unlock()?;
-        self.unlocked = true;
-        Ok(())
-    }
-
-    pub fn try_lock(&mut self) -> Result<(), TryLockError> {
         self.db.backing.try_lock()?;
-        self.unlocked = false;
-        Ok(())
+        self.locked = true;
+        let r = f(self)?;
+        self.db.backing.unlock()?;
+        self.locked = false;
+        Ok(r)
     }
 }
 
-impl Into<ReloadableDb> for NormalDb {
-    fn into(self) -> ReloadableDb {
-        ReloadableDb {
+impl TryInto<ReloadableDb> for NormalDb {
+    type Error = std::io::Error;
+
+    fn try_into(self) -> Result<ReloadableDb, Self::Error> {
+        self.backing.unlock()?;
+        Ok(ReloadableDb {
             db: self,
-            unlocked: false,
-        }
+            locked: false,
+        })
     }
 }
 
 impl DerefMut for ReloadableDb {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        if self.unlocked {
+        if !self.locked {
             panic!("dereferencing unlocked ReloadableDb");
         }
         &mut self.db
@@ -95,7 +100,7 @@ impl Deref for ReloadableDb {
     type Target = Database<FileWithPath>;
 
     fn deref(&self) -> &Self::Target {
-        if self.unlocked {
+        if !self.locked {
             panic!("dereferencing unlocked ReloadableDb");
         }
         &self.db
