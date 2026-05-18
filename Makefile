@@ -22,7 +22,11 @@ install: target/release/track
 install_systemd: install
 	install -d $(SYSTEMD_DIR)
 	install -m 0644 track-notify.service $(SYSTEMD_DIR)/track-notify.service
-	systemctl --user daemon-reload || true
+ifeq ($(USER),1)
+	-systemctl --user daemon-reload
+else
+	-systemctl daemon-reload
+endif
 
 clean:
 	cargo clean
