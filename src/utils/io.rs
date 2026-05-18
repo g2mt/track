@@ -1,4 +1,4 @@
-use std::fs::File;
+use std::fs::{File, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -37,6 +37,10 @@ impl FileWithPath {
 
     pub fn into_open_args(self) -> (PathBuf, std::fs::OpenOptions) {
         self.open_args
+    }
+
+    pub fn try_lock(&self) -> Result<(), TryLockError> {
+        self.file.try_lock()
     }
 
     pub fn unlock(&self) -> io::Result<()> {

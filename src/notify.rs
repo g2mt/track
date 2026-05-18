@@ -145,7 +145,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
 
     let (mtx, cvar) = &*exited;
     loop {
-        ReloadableDb::unlock(&mut db)?; // unlock to allow changes from other processes
+        db.unlock()?; // unlock to allow changes from other processes
 
         // Wait for exit signal or reload timeout
         let mut state = mtx.lock().unwrap();
@@ -159,7 +159,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
         }
 
         let reloaded;
-        (db, reloaded) = ReloadableDb::reload(db)?;
+        (db, reloaded) = db.reload()?;
         if reloaded {
             println!("[{}] reloaded", OffsetDateTime::now_local()?);
             info = db.read_info()?.unwrap_or_default();
@@ -186,6 +186,9 @@ pub fn run_daemon(args: Args) -> Result<()> {
         {
             println!("{cat}: failed to spawn notifier: {e}");
         }
+
+        // Write to database and update notification times
+        db.try_lock()?;
         let done_today = {
             let now = OffsetDateTime::now_local()?;
             let today_start = now.replace_time(Time::MIDNIGHT);
@@ -193,12 +196,13 @@ pub fn run_daemon(args: Args) -> Result<()> {
             let start = today_start.unix_timestamp() as u64;
             let end = today_end.unix_timestamp() as u64;
             let mut iter = db.entries();
-            iter.any(|r| match r {
+            let done_today = iter.any(|r| match r {
                 Ok((_, entry)) => {
                     entry.category == cat && entry.start_time >= start && entry.start_time < end
                 }
                 Err(_) => false,
-            })
+            });
+            done_today
         };
         let next_item = if !done_today {
             let mut item = item;

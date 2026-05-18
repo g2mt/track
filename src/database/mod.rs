@@ -6,6 +6,7 @@ pub mod schema;
 #[cfg(test)]
 mod tests;
 
+use std::fs::TryLockError;
 use std::ops::{Deref, DerefMut};
 
 pub use base::Database;
@@ -62,6 +63,12 @@ impl ReloadableDb {
         }
         self.db.backing.unlock()?;
         self.unlocked = true;
+        Ok(())
+    }
+
+    pub fn try_lock(&mut self) -> Result<(), TryLockError> {
+        self.db.backing.try_lock()?;
+        self.unlocked = false;
         Ok(())
     }
 }
