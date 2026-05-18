@@ -1,4 +1,5 @@
 use std::collections::BinaryHeap;
+use std::fs::File;
 use std::num::NonZeroU64;
 use std::process::Command;
 use std::sync::{Arc, Condvar, Mutex};
@@ -7,8 +8,7 @@ use std::time::Duration;
 use anyhow::Result;
 use time::{OffsetDateTime, Time};
 
-use crate::args::Args;
-use crate::database::Frequency;
+use crate::database::{Database, Frequency};
 
 fn command_exists(cmd: &str) -> bool {
     if cmd.contains('/') {
@@ -78,6 +78,11 @@ impl Ord for ScheduleItem {
     }
 }
 
+pub struct Args<'a> {
+    pub db: Database<File>,
+    pub notifier: &'a str,
+}
+
 pub fn run_daemon(args: Args) -> Result<()> {
     if !command_exists(&args.notifier) {
         anyhow::bail!("Notifier binary not found: {}", args.notifier);
@@ -91,7 +96,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
         cvar.notify_one();
     })?;
 
-    let mut db = args.open_database(false)?;
+    let mut db = args.db;
     let mut info = db.read_info()?.unwrap_or_default();
     let mut heap = BinaryHeap::new();
     let now = OffsetDateTime::now_local()?;
@@ -153,14 +158,14 @@ pub fn run_daemon(args: Args) -> Result<()> {
                 .arg(item.category.as_ref())
                 .spawn()
             {
-                println!("[{}] failed to spawn notifier: {e}", cat);
+                println!("[{cat}] failed to spawn notifier: {e}");
             }
             let next_item = item.into_next_notification(OffsetDateTime::now_local()?);
             if let Some(data) = info.data_mut(&cat) {
                 data.next_notification =
                     NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
                 if let Err(e) = db.write_info(&info) {
-                    println!("[{}] failed to save next_notification: {e}", cat);
+                    println!("[{cat}] failed to save next_notification: {e}");
                 }
             }
             heap.push(next_item);

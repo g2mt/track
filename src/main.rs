@@ -43,7 +43,10 @@ fn main() -> Result<()> {
     // Notify
 
     if args.notify {
-        return notify::run_daemon(args);
+        return notify::run_daemon(notify::Args {
+            db: args.open_database(true)?,
+            notifier: &args.notifier,
+        });
     }
 
     // Info listing
