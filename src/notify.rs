@@ -1,13 +1,14 @@
 use std::collections::BinaryHeap;
 use std::num::NonZeroU64;
 use std::process::Command;
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use parking_lot::{Condvar, Mutex};
 use time::{OffsetDateTime, Time};
 
-use crate::database::{Frequency, MainDatabase};
+use crate::database::{Frequency, Info, MultiThreadedDb};
 
 fn command_exists(cmd: &str) -> bool {
     if cmd.contains('/') {
@@ -77,29 +78,8 @@ impl Ord for ScheduleItem {
     }
 }
 
-pub struct Args<'a> {
-    pub db: MainDatabase,
-    pub notifier: &'a str,
-}
-
-pub fn run_daemon(args: Args) -> Result<()> {
-    if !command_exists(&args.notifier) {
-        anyhow::bail!("Notifier binary not found: {}", args.notifier);
-    }
-
-    let pair = Arc::new((Mutex::new(false), Condvar::new()));
-    let p = pair.clone();
-    ctrlc::set_handler(move || {
-        let (lock, cvar) = &*p;
-        *lock.lock().unwrap() = true;
-        cvar.notify_one();
-    })?;
-
-    let mut db = args.db;
-    let mut info = db.read_info()?.unwrap_or_default();
+fn build_heap(info: &Info, now: OffsetDateTime) -> BinaryHeap<ScheduleItem> {
     let mut heap = BinaryHeap::new();
-    let now = OffsetDateTime::now_local()?;
-
     for (category, data) in info.iter() {
         if let Some(ref freq) = data.notify_every {
             let item = ScheduleItem {
@@ -121,35 +101,105 @@ pub fn run_daemon(args: Args) -> Result<()> {
             heap.push(item);
         }
     }
+    heap
+}
+
+fn reload_heap_and_info(mdb: &MultiThreadedDb) -> Result<(Info, BinaryHeap<ScheduleItem>)> {
+    let mut db = mdb.reload()?;
+    let info = db.read_info()?.unwrap_or_default();
+    let now = OffsetDateTime::now_local()?;
+    let heap = build_heap(&info, now);
+    Ok((info, heap))
+}
+
+pub struct Args<'a> {
+    pub mdb: Arc<MultiThreadedDb>,
+    pub notifier: &'a str,
+}
+
+enum State {
+    Continue,
+    Reloaded,
+    Stopped,
+}
+
+pub fn run_daemon(args: Args) -> Result<()> {
+    if !command_exists(&args.notifier) {
+        anyhow::bail!("Notifier binary not found: {}", args.notifier);
+    }
+
+    let pair = Arc::new((Mutex::new(State::Continue), Condvar::new()));
+
+    // Ctrl-C handler
+    {
+        let pair = pair.clone();
+        ctrlc::set_handler(move || {
+            let (mtx, cvar) = &*pair;
+            *mtx.lock() = State::Stopped;
+            cvar.notify_all();
+        })?;
+    }
+
+    // Reload polling thread
+    {
+        let mdb = args.mdb.clone();
+        let pair = pair.clone();
+        std::thread::spawn(move || loop {
+            let (mtx, cvar) = &*pair;
+            cvar.wait_for(&mut mtx.lock(), Duration::from_secs(5));
+            if mdb.take_if_changed() {
+                *mtx.lock() = State::Reloaded;
+                cvar.notify_one();
+            }
+        });
+    }
+
+    let mut info = args.mdb.lock()?.read_info()?.unwrap_or_default();
+    let now = OffsetDateTime::now_local()?;
+    let mut heap = build_heap(&info, now);
 
     if heap.is_empty() {
         println!("No categories with set frequency.");
         return Ok(());
     }
 
-    let (lock, cvar) = &*pair;
-    let mut stop = lock.lock().unwrap();
-    while !*stop {
+    let (mtx, cvar) = &*pair;
+    loop {
+        let mut state = mtx.lock();
+
+        match *state {
+            State::Continue => (),
+            State::Reloaded => {
+                *state = State::Continue;
+                (info, heap) = reload_heap_and_info(&args.mdb)?;
+                continue;
+            }
+            State::Stopped => {
+                break;
+            }
+        }
+
         let Some(item) = heap.peek() else {
             break;
         };
 
         let now = OffsetDateTime::now_local()?;
         let sleep_until = item.next_notification;
-
         if sleep_until > now {
             let millis = (sleep_until - now).whole_milliseconds().max(0) as u64;
             println!("[{}] next {} on {}", now, item.category, sleep_until);
             if millis > 0 {
-                stop = cvar
-                    .wait_timeout(stop, Duration::from_millis(millis))
-                    .unwrap()
-                    .0;
-            }
-            if *stop {
-                break;
+                cvar.wait_for(&mut state, Duration::from_millis(millis));
             }
         }
+
+        let mut db = match args.mdb.lock() {
+            Ok(db) => db,
+            Err(_) => {
+                (info, heap) = reload_heap_and_info(&args.mdb)?;
+                continue;
+            }
+        };
 
         if let Some(item) = heap.pop() {
             let cat = item.category.clone();

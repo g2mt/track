@@ -8,9 +8,8 @@ pub mod traits {
         fn set_len(&self, size: u64) -> std::io::Result<()>;
     }
 
-    pub trait Reload {
+    pub trait Changeable {
         fn changed(&self) -> bool;
-        fn reload(self) -> Self;
     }
 }
 
@@ -19,21 +18,25 @@ pub mod traits {
 #[derive(Debug)]
 pub struct FileWithPath {
     file: File,
-    path: PathBuf,
+    open_args: (PathBuf, std::fs::OpenOptions),
     snap: (Option<SystemTime>, u64),
 }
 
 impl FileWithPath {
-    pub fn open(path: PathBuf, options: &std::fs::OpenOptions) -> io::Result<Self> {
+    pub fn open(path: PathBuf, options: std::fs::OpenOptions) -> io::Result<Self> {
         let file = options.open(&path)?;
         file.try_lock()?;
         let metadata = file.metadata()?;
         let snap = (metadata.modified().ok(), metadata.len());
         Ok(Self {
             file,
-            path,
+            open_args: (path, options),
             snap,
         })
+    }
+
+    pub fn into_open_args(self) -> (PathBuf, std::fs::OpenOptions) {
+        self.open_args
     }
 }
 
@@ -73,16 +76,14 @@ impl self::traits::Truncate for FileWithPath {
     }
 }
 
-impl self::traits::Reload for FileWithPath {
+impl self::traits::Changeable for FileWithPath {
     fn changed(&self) -> bool {
-        std::fs::metadata(&self.path).ok().is_some_and(|meta| {
-            let size_changed = meta.len() != self.snap.1;
-            let mtime_changed = self.snap.0 != meta.modified().ok();
-            size_changed || mtime_changed
-        })
-    }
-
-    fn reload(self) -> Self {
-        todo!()
+        std::fs::metadata(&self.open_args.0)
+            .ok()
+            .is_some_and(|meta| {
+                let size_changed = meta.len() != self.snap.1;
+                let mtime_changed = self.snap.0 != meta.modified().ok();
+                size_changed || mtime_changed
+            })
     }
 }

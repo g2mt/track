@@ -44,7 +44,7 @@ fn main() -> Result<()> {
 
     if args.notify {
         return notify::run_daemon(notify::Args {
-            db: args.open_database(true)?,
+            mdb: args.open_database(true)?.into(),
             notifier: &args.notifier,
         });
     }

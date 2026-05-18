@@ -9,9 +9,9 @@ use crate::utils::io::traits::Truncate;
 
 pub struct Database<Backing: Seek + Read> {
     #[cfg(test)]
-    pub backing: Backing,
+    pub(crate) backing: Backing,
     #[cfg(not(test))]
-    backing: Backing,
+    pub(super) backing: Backing,
 }
 
 impl<Backing: Seek + Read> Database<Backing> {

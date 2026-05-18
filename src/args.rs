@@ -6,7 +6,7 @@ use clap_complete::Shell;
 use regex::Regex;
 
 use crate::align::Align;
-use crate::database::{Frequency, MainDatabase};
+use crate::database::{Frequency, MainDatabase, SingleThreadedDb};
 use crate::utils::io::FileWithPath;
 
 #[derive(Debug)]
@@ -128,7 +128,7 @@ impl Args {
             .transpose()
     }
 
-    pub fn open_database(&self, write: bool) -> Result<MainDatabase> {
+    pub fn open_database(&self, write: bool) -> Result<SingleThreadedDb> {
         let path = self
             .file
             .as_ref()
@@ -142,8 +142,8 @@ impl Args {
 
         let mut options = std::fs::OpenOptions::new();
         options.read(true).write(write).create(write);
-        let db_file = FileWithPath::open(path, &options)?;
-        Ok(MainDatabase::new(db_file))
+        let db_file = FileWithPath::open(path, options)?;
+        Ok(SingleThreadedDb::new(db_file))
     }
 }
 

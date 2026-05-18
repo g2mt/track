@@ -6,12 +6,12 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
-use crate::database::MainDatabase;
+use crate::database::SingleThreadedDb;
 use crate::heatmap::durations::HeatmapDurations;
 use crate::utils::cli;
 
 pub struct Args {
-    pub db: MainDatabase,
+    pub db: SingleThreadedDb,
     pub from: Option<OffsetDateTime>,
     pub to: Option<OffsetDateTime>,
     pub category_match: Option<CategoryMatch>,
