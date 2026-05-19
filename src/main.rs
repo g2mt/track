@@ -46,6 +46,7 @@ fn main() -> Result<()> {
         return notify::run_daemon(notify::Args {
             db: args.open_database(true)?.try_into()?,
             notifier: &args.notifier,
+            notify_again: args.notify_again.clone(),
         });
     }
 

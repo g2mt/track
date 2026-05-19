@@ -82,6 +82,7 @@ fn build_heap(info: &Info, now: OffsetDateTime) -> BinaryHeap<ScheduleItem> {
 pub struct Args<'a> {
     pub db: ReloadableDb,
     pub notifier: &'a str,
+    pub notify_again: Frequency,
 }
 
 pub fn run_daemon(args: Args) -> Result<()> {
@@ -179,9 +180,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
             };
             let next_item = if !done_today {
                 let mut item = item;
-                item.next_notification = OffsetDateTime::now_local()?
-                    .truncate_to_hour()
-                    .saturating_add(time::Duration::hours(1));
+                item.next_notification = args.notify_again.next_date(OffsetDateTime::now_local()?);
                 item
             } else {
                 item.into_next_notification(OffsetDateTime::now_local()?)

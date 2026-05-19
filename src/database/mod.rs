@@ -12,8 +12,8 @@ use anyhow::Result;
 pub use base::Database;
 pub use schema::{CategoryData, Entry, Frequency, Info};
 
-use crate::utils::io::traits::Changeable;
 use crate::utils::io::FileWithPath;
+use crate::utils::io::traits::Changeable;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {

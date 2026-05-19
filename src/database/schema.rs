@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
+use std::str::FromStr;
 use std::sync::Arc;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::str::FromStr;
 use time::{OffsetDateTime, Time, Weekday};
 
 use crate::args::CategoryMatch;

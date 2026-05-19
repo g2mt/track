@@ -102,6 +102,14 @@ pub struct Args {
     /// Reset the next notification time for a category
     #[arg(long = "reset-notification", help_heading = "Notifications")]
     pub reset_notification: bool,
+
+    /// How long to wait before retrying a notification (day, hour, mon-sun, or 1-31)
+    #[arg(
+        long = "notify-again",
+        default_value = "hour",
+        help_heading = "Notifications"
+    )]
+    pub notify_again: Frequency,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
