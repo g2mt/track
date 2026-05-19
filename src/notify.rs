@@ -28,31 +28,7 @@ struct ScheduleItem {
 
 impl ScheduleItem {
     fn into_next_notification(mut self, now: OffsetDateTime) -> Self {
-        self.next_notification = match &self.freq {
-            Frequency::Day => {
-                let tomorrow = now.date().next_day().unwrap();
-                tomorrow
-                    .with_time(Time::MIDNIGHT)
-                    .assume_offset(now.offset())
-            }
-            Frequency::Hour => {
-                let this_hour = now.truncate_to_hour();
-                this_hour.saturating_add(time::Duration::HOUR)
-            }
-            Frequency::DayOfWeek(weekday) => {
-                let target_date = now.date();
-                now.replace_time(time::Time::from_hms(0, 0, 0).unwrap())
-                    .replace_date(target_date.next_occurrence(*weekday))
-            }
-            Frequency::DayOfMonth(day) => {
-                let mut target_date = now.date().next_day().unwrap();
-                while target_date.day() != *day {
-                    target_date = target_date.next_day().unwrap();
-                }
-                now.replace_time(time::Time::from_hms(0, 0, 0).unwrap())
-                    .replace_date(target_date)
-            }
-        };
+        self.next_notification = self.freq.next_date(now);
         self
     }
 }

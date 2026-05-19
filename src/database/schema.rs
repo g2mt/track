@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::str::FromStr;
-use time::Weekday;
+use time::{OffsetDateTime, Time, Weekday};
 
 use crate::args::CategoryMatch;
 
@@ -74,6 +74,37 @@ impl FromStr for Frequency {
                 Err(format!(
                     "invalid frequency: '{s}'. expected: day, hour, mon-sun, or 1-31"
                 ))
+            }
+        }
+    }
+}
+
+impl Frequency {
+    /// Compute the next notification datetime after `now` for this frequency.
+    pub fn next_date(&self, now: OffsetDateTime) -> OffsetDateTime {
+        match self {
+            Frequency::Day => {
+                let tomorrow = now.date().next_day().unwrap();
+                tomorrow
+                    .with_time(Time::MIDNIGHT)
+                    .assume_offset(now.offset())
+            }
+            Frequency::Hour => {
+                let this_hour = now.truncate_to_hour();
+                this_hour.saturating_add(time::Duration::HOUR)
+            }
+            Frequency::DayOfWeek(weekday) => {
+                let target_date = now.date();
+                now.replace_time(time::Time::from_hms(0, 0, 0).unwrap())
+                    .replace_date(target_date.next_occurrence(*weekday))
+            }
+            Frequency::DayOfMonth(day) => {
+                let mut target_date = now.date().next_day().unwrap();
+                while target_date.day() != *day {
+                    target_date = target_date.next_day().unwrap();
+                }
+                now.replace_time(time::Time::from_hms(0, 0, 0).unwrap())
+                    .replace_date(target_date)
             }
         }
     }
