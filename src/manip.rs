@@ -96,14 +96,17 @@ pub fn set_frequency(mut db: NormalDb, category: Arc<str>, freq: Frequency) -> R
     let mut info = db.read_info()?.unwrap_or_default();
     {
         let data = info.add_category(category.clone());
-        data.notify_every = Some(freq);
+        data.notify_every = Some(freq.clone());
     }
     let style =
         anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
     println!(
-        "Set notification frequency for {}{}{}",
+        "Set notification frequency for {}{}{} to {}{:?}{}",
         style,
         category,
+        anstyle::Reset,
+        style,
+        freq,
         anstyle::Reset
     );
     db.write_info(&info)?;
