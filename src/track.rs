@@ -28,7 +28,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         start_time: 0,
         end_time: 0,
     };
-    db.try_lock(|db| {
+    let early_exit = db.try_lock(|db| {
         let mut info = db.read_info()?.unwrap_or_default();
         info.add_category(category.clone());
 
@@ -51,7 +51,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
                 category,
                 anstyle::Reset,
             );
-            return Ok(());
+            return Ok(true);
         }
 
         db.write_info(&info)?;
@@ -75,8 +75,11 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         db_entry.end_time = start_time;
         db.append_entry(&db_entry)?;
 
-        Ok(())
+        Ok(false)
     })?;
+    if early_exit {
+        return Ok(());
+    }
 
     let (lock, cvar) = &*pair;
     let mut stop = lock.lock().unwrap();
