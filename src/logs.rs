@@ -6,7 +6,7 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
-use crate::database::NormalDb;
+use crate::database::{CategoryType, NormalDb};
 use crate::heatmap::durations::HeatmapDurations;
 use crate::utils::cli;
 
@@ -49,7 +49,10 @@ pub fn show_logs(args: Args) -> Result<()> {
         align,
     } = args;
 
+    let info = db.read_info()?.unwrap_or_default();
+
     let mut category_durations: HashMap<Arc<str>, u64> = HashMap::new();
+    let mut category_counts: HashMap<Arc<str>, u64> = HashMap::new();
     let mut heatmap_durations = HeatmapDurations::new(from.clone(), to.clone());
 
     let mut head_span = None;
@@ -66,8 +69,17 @@ pub fn show_logs(args: Args) -> Result<()> {
             }
         }
 
+        let is_duration = info
+            .data(&entry.category)
+            .map(|d| matches!(d.r#type, CategoryType::Duration))
+            .unwrap_or(true);
+
         let duration = entry.end_time - entry.start_time;
-        *category_durations.entry(entry.category).or_insert(0) += duration;
+        if is_duration {
+            *category_durations.entry(entry.category).or_insert(0) += duration;
+        } else {
+            *category_counts.entry(entry.category).or_insert(0) += 1;
+        }
 
         let ts = OffsetDateTime::from_unix_timestamp(entry.start_time as i64)?;
         heatmap_durations.add_entry(ts, duration);
@@ -76,10 +88,13 @@ pub fn show_logs(args: Args) -> Result<()> {
         head_span = Some(span);
     }
 
-    let mut categories: Vec<(Arc<str>, u64)> = category_durations.into_iter().collect();
-    categories.sort_by(|a, b| b.1.cmp(&a.1));
+    let mut duration_categories: Vec<(Arc<str>, u64)> = category_durations.into_iter().collect();
+    duration_categories.sort_by(|a, b| b.1.cmp(&a.1));
 
-    let total: u64 = categories.iter().map(|(_, d)| d).sum();
+    let mut oneshot_categories: Vec<(Arc<str>, u64)> = category_counts.into_iter().collect();
+    oneshot_categories.sort_by(|a, b| b.1.cmp(&a.1));
+
+    let total: u64 = duration_categories.iter().map(|(_, d)| d).sum();
 
     let terminal_width = terminal_size::terminal_size()
         .map(|(w, _)| w.0)
@@ -112,12 +127,10 @@ pub fn show_logs(args: Args) -> Result<()> {
     );
     println!();
 
-    // Category lines, sorted by duration descending
-    let dim =
-        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack)));
+    // Duration category lines, sorted by duration descending
     let bold = anstyle::Style::new().bold();
     let reset = anstyle::Reset;
-    for (category, duration) in &categories {
+    for (category, duration) in &duration_categories {
         let d = std::time::Duration::from_secs(*duration);
         let dur_str = humantime::format_duration(d).to_string();
         align.print(
@@ -127,9 +140,27 @@ pub fn show_logs(args: Args) -> Result<()> {
                 TextFragment::Raw(category),
                 TextFragment::Ansi(&reset),
                 TextFragment::HalfDivisor(" : "),
-                TextFragment::Ansi(&dim),
+                TextFragment::Ansi(&date_ansi),
                 TextFragment::Raw(&dur_str),
                 TextFragment::Ansi(&reset),
+            ],
+            terminal_width,
+        );
+    }
+
+    // Oneshot category lines, sorted by count descending
+    for (category, count) in &oneshot_categories {
+        align.print(
+            &[
+                TextFragment::Raw(&"  "),
+                TextFragment::Ansi(&bold),
+                TextFragment::Raw(category),
+                TextFragment::Ansi(&reset),
+                TextFragment::HalfDivisor(" : "),
+                TextFragment::Ansi(&date_ansi),
+                TextFragment::Raw(&count.to_string()),
+                TextFragment::Ansi(&reset),
+                TextFragment::Raw(" times"),
             ],
             terminal_width,
         );
