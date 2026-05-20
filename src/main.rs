@@ -11,6 +11,7 @@ use args::Args;
 use args::DebugHeatmap;
 
 mod align;
+mod chart;
 mod database;
 use database::CategoryData;
 mod heatmap;
@@ -106,6 +107,46 @@ fn main() -> Result<()> {
         };
         heatmap::debug::show_debug_heatmap(rows, cols);
         return Ok(());
+    }
+
+    // Debug chart
+
+    #[cfg(debug_assertions)]
+    if args.debug_chart {
+        chart::show_debug_chart(5);
+        return Ok(());
+    }
+
+    // Chart
+
+    if args.chart {
+        let log_from = if args.logs.today {
+            Some(utils::time::today()?)
+        } else if args.logs.yesterday {
+            Some(utils::time::yesterday()?)
+        } else if args.logs.this_week {
+            Some(utils::time::this_week()?)
+        } else if args.logs.this_month {
+            Some(utils::time::this_month()?)
+        } else if args.logs.this_year {
+            Some(utils::time::this_year()?)
+        } else {
+            args.from
+                .as_deref()
+                .map(utils::time::parse_datetime)
+                .transpose()?
+        };
+        let log_to = args
+            .to
+            .as_deref()
+            .map(utils::time::parse_datetime)
+            .transpose()?;
+        return chart::show_chart(chart::Args {
+            db: args.open_database(false)?,
+            from: log_from,
+            to: log_to,
+            category_match: args.category_match()?,
+        });
     }
 
     // Logging

@@ -6,6 +6,7 @@ use time::OffsetDateTime;
 
 use crate::align::{Align, TextFragment};
 use crate::args::CategoryMatch;
+use crate::database::range::TimeRange;
 use crate::database::{CategoryType, NormalDb};
 use crate::heatmap::durations::HeatmapDurations;
 use crate::utils::cli;
@@ -17,26 +18,6 @@ pub struct Args {
     pub category_match: Option<CategoryMatch>,
     pub clean: bool,
     pub align: Align,
-}
-
-struct TimeRange {
-    from: Option<OffsetDateTime>,
-    to: Option<OffsetDateTime>,
-}
-
-impl std::ops::RangeBounds<OffsetDateTime> for TimeRange {
-    fn start_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
-        match &self.from {
-            Some(dt) => std::ops::Bound::Included(dt),
-            None => std::ops::Bound::Unbounded,
-        }
-    }
-    fn end_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
-        match &self.to {
-            Some(dt) => std::ops::Bound::Included(dt),
-            None => std::ops::Bound::Unbounded,
-        }
-    }
 }
 
 pub fn show_logs(args: Args) -> Result<()> {
@@ -101,33 +82,11 @@ pub fn show_logs(args: Args) -> Result<()> {
         .unwrap_or(80);
 
     // Header: yellow FROM .. TO
-    let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
-        .expect("valid format description");
-    let date_ansi =
-        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
-    let from_s = from
-        .as_ref()
-        .map(|dt| dt.format(&fmt).unwrap())
-        .unwrap_or_else(|| "beginning".to_string());
-    let to_s = to
-        .as_ref()
-        .map(|dt| dt.format(&fmt).unwrap())
-        .unwrap_or_else(|| "now".to_string());
-    align.print(
-        &[
-            TextFragment::Ansi(&date_ansi),
-            TextFragment::Raw(&from_s),
-            TextFragment::Ansi(&anstyle::Reset),
-            TextFragment::Raw(&" .. "),
-            TextFragment::Ansi(&date_ansi),
-            TextFragment::Raw(&to_s),
-            TextFragment::Ansi(&anstyle::Reset),
-        ],
-        terminal_width,
-    );
-    println!();
+    crate::utils::time::print_date_range_header(&align, from.as_ref(), to.as_ref(), terminal_width);
 
     // Duration category lines, sorted by duration descending
+    let date_ansi =
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
     let bold = anstyle::Style::new().bold();
     let reset = anstyle::Reset;
     for (category, duration) in &duration_categories {

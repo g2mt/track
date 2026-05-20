@@ -4,7 +4,27 @@ use std::ops::{Bound, RangeBounds};
 use anyhow::Result;
 use time::OffsetDateTime;
 
-use super::{Entry, Span, iter};
+use super::{iter, Entry, Span};
+
+pub struct TimeRange {
+    pub from: Option<OffsetDateTime>,
+    pub to: Option<OffsetDateTime>,
+}
+
+impl std::ops::RangeBounds<OffsetDateTime> for TimeRange {
+    fn start_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
+        match &self.from {
+            Some(dt) => std::ops::Bound::Included(dt),
+            None => std::ops::Bound::Unbounded,
+        }
+    }
+    fn end_bound(&self) -> std::ops::Bound<&OffsetDateTime> {
+        match &self.to {
+            Some(dt) => std::ops::Bound::Included(dt),
+            None => std::ops::Bound::Unbounded,
+        }
+    }
+}
 
 pub struct LatestRange<'a, Backing: Seek + Read, R: RangeBounds<OffsetDateTime>> {
     iter: iter::Iter<'a, Backing>,

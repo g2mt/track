@@ -67,6 +67,10 @@ pub struct Args {
     #[arg(long, help_heading = "Metadata")]
     pub clean: bool,
 
+    /// Show a bar chart for category totals within a date range
+    #[arg(long, help_heading = "Logs")]
+    pub chart: bool,
+
     /// Set the category type (duration or oneshot)
     #[arg(long = "type", help_heading = "Metadata")]
     pub category_type: Option<CategoryType>,
@@ -114,6 +118,11 @@ pub struct Args {
     #[cfg(debug_assertions)]
     #[arg(long, value_enum)]
     pub debug_heatmap: Option<DebugHeatmap>,
+
+    /// Show a debug chart with fake data
+    #[cfg(debug_assertions)]
+    #[arg(long)]
+    pub debug_chart: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]

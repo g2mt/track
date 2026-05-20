@@ -64,3 +64,34 @@ pub fn this_year() -> Result<OffsetDateTime> {
         .assume_offset(now.offset());
     Ok(from)
 }
+
+pub fn print_date_range_header(
+    align: &crate::align::Align,
+    from: Option<&OffsetDateTime>,
+    to: Option<&OffsetDateTime>,
+    terminal_width: u16,
+) {
+    let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
+        .expect("valid format description");
+    let date_ansi =
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+    let from_s = from
+        .map(|dt| dt.format(&fmt).unwrap())
+        .unwrap_or_else(|| "beginning".to_string());
+    let to_s = to
+        .map(|dt| dt.format(&fmt).unwrap())
+        .unwrap_or_else(|| "now".to_string());
+    align.print(
+        &[
+            crate::align::TextFragment::Ansi(&date_ansi),
+            crate::align::TextFragment::Raw(&from_s),
+            crate::align::TextFragment::Ansi(&anstyle::Reset),
+            crate::align::TextFragment::Raw(" .. "),
+            crate::align::TextFragment::Ansi(&date_ansi),
+            crate::align::TextFragment::Raw(&to_s),
+            crate::align::TextFragment::Ansi(&anstyle::Reset),
+        ],
+        terminal_width,
+    );
+    println!();
+}
