@@ -41,6 +41,10 @@ pub fn show_chart(args: Args) -> Result<()> {
     let total_days = ((concrete_to - concrete_from).whole_days() + 1).max(1) as usize;
     let inner_width = if term_width >= 2 { term_width - 2 } else { 1 };
     let days_per_col = ((total_days + inner_width - 1) / inner_width).max(1);
+    // Number of columns needed to cover all days; used to center the chart.
+    let used_cols = (total_days + days_per_col - 1) / days_per_col;
+    // Offset to center the bars horizontally when fewer columns are used.
+    let col_offset = inner_width.saturating_sub(used_cols);
 
     let mut columns = vec![0u64; inner_width];
     for res in db.latest_entries_range(TimeRange {
@@ -67,7 +71,8 @@ pub fn show_chart(args: Args) -> Result<()> {
         let ts = OffsetDateTime::from_unix_timestamp(entry.start_time as i64)?;
         let day = ts.replace_time(time::Time::MIDNIGHT);
         let offset = (day - concrete_from).whole_days() as usize;
-        let col = offset / days_per_col;
+        // Shift column right by the centering offset so bars appear centered.
+        let col = col_offset + offset / days_per_col;
         if col < inner_width {
             let duration = entry.end_time - entry.start_time;
             columns[col] += duration;
