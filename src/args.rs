@@ -31,6 +31,22 @@ pub struct Args {
     #[arg(short = 'f', long = "file")]
     pub file: Option<String>,
 
+    /// Set daily goal for a project (e.g. "1h")
+    #[arg(short = 'g', long)]
+    pub goal: Option<String>,
+
+    /// Treat category as a regex pattern
+    #[arg(short = 'r', long = "regex")]
+    pub regex: bool,
+
+    /// Generate shell completion scripts
+    #[arg(long, value_enum)]
+    pub completion: Option<Shell>,
+
+    /// Category name
+    #[arg()]
+    pub category: Option<Arc<str>>,
+
     /// Print all category names line by line then exit
     #[arg(long, help_heading = "Metadata")]
     pub categories: bool,
@@ -43,32 +59,9 @@ pub struct Args {
     #[arg(long, help_heading = "Metadata")]
     pub frequencies: bool,
 
-    /// Set daily goal for a project (e.g. "1h")
-    #[arg(short = 'g', long)]
-    pub goal: Option<String>,
-
     /// Align category lines in output
     #[arg(long, default_value = "center", help_heading = "Metadata")]
     pub align: Align,
-
-    #[command(flatten)]
-    pub logs: Logs,
-
-    /// Start of time range for logs
-    #[arg(long = "from", conflicts_with = "dated_log", help_heading = "Logs")]
-    pub from: Option<String>,
-
-    /// End of time range for logs
-    #[arg(long = "to", conflicts_with = "dated_log", help_heading = "Logs")]
-    pub to: Option<String>,
-
-    /// Category name
-    #[arg()]
-    pub category: Option<Arc<str>>,
-
-    /// Treat category as a regex pattern
-    #[arg(short = 'r', long = "regex")]
-    pub regex: bool,
 
     /// Clean mode (delete logs/records instead of showing)
     #[arg(long, help_heading = "Metadata")]
@@ -82,14 +75,16 @@ pub struct Args {
     #[arg(long = "remove-category", help_heading = "Metadata")]
     pub remove_category: bool,
 
-    /// Generate shell completion scripts
-    #[arg(long, value_enum)]
-    pub completion: Option<Shell>,
+    #[command(flatten)]
+    pub logs: Logs,
 
-    /// Show a debug heatmap (day: 24 columns, month: 7x5 grid)
-    #[cfg(debug_assertions)]
-    #[arg(long, value_enum)]
-    pub debug_heatmap: Option<DebugHeatmap>,
+    /// Start of time range for logs
+    #[arg(long = "from", conflicts_with = "dated_log", help_heading = "Logs")]
+    pub from: Option<String>,
+
+    /// End of time range for logs
+    #[arg(long = "to", conflicts_with = "dated_log", help_heading = "Logs")]
+    pub to: Option<String>,
 
     /// Run notification loop in the foreground
     #[arg(short = 'n', long = "notify", help_heading = "Notifications")]
@@ -114,6 +109,11 @@ pub struct Args {
         help_heading = "Notifications"
     )]
     pub notify_again: Frequency,
+
+    /// Show a debug heatmap (day: 24 columns, month: 7x5 grid)
+    #[cfg(debug_assertions)]
+    #[arg(long, value_enum)]
+    pub debug_heatmap: Option<DebugHeatmap>,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
