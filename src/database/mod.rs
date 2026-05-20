@@ -10,7 +10,7 @@ use std::ops::{Deref, DerefMut};
 
 use anyhow::Result;
 pub use base::Database;
-pub use schema::{CategoryData, Entry, Frequency, Info};
+pub use schema::{CategoryData, CategoryType, Entry, Frequency, Info};
 
 use crate::utils::io::FileWithPath;
 use crate::utils::io::traits::Changeable;

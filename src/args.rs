@@ -6,7 +6,7 @@ use clap_complete::Shell;
 use regex::Regex;
 
 use crate::align::Align;
-use crate::database::{Frequency, NormalDb};
+use crate::database::{CategoryType, Frequency, NormalDb};
 use crate::utils::io::FileWithPath;
 
 #[derive(Debug)]
@@ -73,6 +73,10 @@ pub struct Args {
     /// Clean mode (delete logs/records instead of showing)
     #[arg(long, help_heading = "Metadata")]
     pub clean: bool,
+
+    /// Set the category type (duration or oneshot)
+    #[arg(long = "type", help_heading = "Metadata")]
+    pub category_type: Option<CategoryType>,
 
     /// Remove category from info only (goals and category list)
     #[arg(long = "remove-category", help_heading = "Metadata")]

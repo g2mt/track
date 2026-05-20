@@ -169,6 +169,8 @@ fn main() -> Result<()> {
         )
     } else if let Some(ref freq) = args.frequency {
         manip::set_frequency(args.open_database(true)?, category, freq.clone())
+    } else if let Some(ref ty) = args.category_type {
+        manip::set_type(args.open_database(true)?, category, ty.clone())
     } else if args.reset_notification {
         let cm = args.category_match()?.unwrap();
         let mut db = args.open_database(true)?;

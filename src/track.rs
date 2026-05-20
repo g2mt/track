@@ -6,7 +6,7 @@ use anyhow::Result;
 use humantime::format_duration;
 use terminal_size::terminal_size;
 
-use crate::database::{Entry, ReloadableDb};
+use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
 
 pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
@@ -31,6 +31,29 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
     db.try_lock(|db| {
         let mut info = db.read_info()?.unwrap_or_default();
         info.add_category(category.clone());
+
+        if info
+            .data(&category)
+            .map(|d| d.r#type == CategoryType::Oneshot)
+            .unwrap_or(false)
+        {
+            let now = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
+            let entry = Entry {
+                category: category.clone(),
+                start_time: now,
+                end_time: now + 1,
+            };
+            db.append_entry(&entry)?;
+            println!(
+                "Recorded {}{}{}",
+                anstyle::Style::new()
+                    .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow))),
+                category,
+                anstyle::Reset,
+            );
+            return Ok(());
+        }
+
         db.write_info(&info)?;
 
         // Load initial elapsed from today's entries for this category

@@ -8,6 +8,61 @@ use time::{OffsetDateTime, Time, Weekday};
 
 use crate::args::CategoryMatch;
 
+#[derive(Debug, Clone, PartialEq, Default, clap::ValueEnum)]
+pub enum CategoryType {
+    #[default]
+    Duration,
+    Oneshot,
+}
+
+impl CategoryType {
+    fn is_duration(&self) -> bool {
+        matches!(self, CategoryType::Duration)
+    }
+}
+
+impl Serialize for CategoryType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match self {
+            CategoryType::Duration => serializer.serialize_str("duration"),
+            CategoryType::Oneshot => serializer.serialize_str("oneshot"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for CategoryType {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "duration" => Ok(CategoryType::Duration),
+            "oneshot" => Ok(CategoryType::Oneshot),
+            _ => Err(serde::de::Error::custom(format!(
+                "invalid category type: '{s}'. expected: duration or oneshot"
+            ))),
+        }
+    }
+}
+
+impl FromStr for CategoryType {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "duration" => Ok(CategoryType::Duration),
+            "oneshot" => Ok(CategoryType::Oneshot),
+            _ => Err(format!(
+                "invalid category type: '{s}'. expected: duration or oneshot"
+            )),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Frequency {
     Day,
@@ -118,6 +173,8 @@ pub struct CategoryData {
     pub notify_every: Option<Frequency>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_notification: Option<NonZeroU64>,
+    #[serde(skip_serializing_if = "CategoryType::is_duration", default)]
+    pub r#type: CategoryType,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]

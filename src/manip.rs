@@ -4,7 +4,7 @@ use std::sync::Arc;
 use anyhow::Result;
 
 use crate::align::{Align, TextFragment};
-use crate::database::{CategoryData, Frequency, NormalDb};
+use crate::database::{CategoryData, CategoryType, Frequency, NormalDb};
 
 pub struct Args {
     pub db: NormalDb,
@@ -107,6 +107,27 @@ pub fn set_frequency(mut db: NormalDb, category: Arc<str>, freq: Frequency) -> R
         anstyle::Reset,
         style,
         freq,
+        anstyle::Reset
+    );
+    db.write_info(&info)?;
+    Ok(())
+}
+
+pub fn set_type(mut db: NormalDb, category: Arc<str>, ty: CategoryType) -> Result<()> {
+    let mut info = db.read_info()?.unwrap_or_default();
+    {
+        let data = info.add_category(category.clone());
+        data.r#type = ty.clone();
+    }
+    let style =
+        anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
+    println!(
+        "Set type for {}{}{} to {}{:?}{}",
+        style,
+        category,
+        anstyle::Reset,
+        style,
+        ty,
         anstyle::Reset
     );
     db.write_info(&info)?;
