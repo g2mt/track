@@ -159,21 +159,27 @@ pub fn run_daemon(args: Args) -> Result<()> {
 
         db.try_lock(|db| {
             // Write to database and update notification times
+            // done_today is true when the total tracked duration for this category
+            // today meets or exceeds its goal. If no goal is set, the notification
+            // always advances to the next scheduled time without re-notifying.
             let done_today = {
                 let now = crate::utils::time::now_local();
                 let today_start = now.replace_time(Time::MIDNIGHT);
                 let today_end = today_start.saturating_add(time::Duration::DAY);
-                let mut iter = db.entries();
-                let done_today = iter.any(|r| match r {
-                    Ok((_, entry)) => {
-                        entry.category == cat
-                            && entry
-                                .start_time_local()
-                                .is_ok_and(|ts| ts >= today_start && ts < today_end)
-                    }
-                    Err(_) => false,
-                });
-                done_today
+                let goal: Option<u64> =
+                    info.data(&cat).and_then(|d| d.goal.map(|g| g.get()));
+                let total: u64 = db
+                    .entries()
+                    .filter_map(|r| match r {
+                        Ok((_, entry)) if entry.category == cat => entry
+                            .start_time_local()
+                            .ok()
+                            .filter(|ts| *ts >= today_start && *ts < today_end)
+                            .map(|_| entry.elapsed_seconds()),
+                        _ => None,
+                    })
+                    .sum();
+                goal.map_or(true, |g| total >= g)
             };
             let next_item = if !done_today {
                 let mut item = item;
