@@ -181,7 +181,8 @@ pub fn run_daemon(args: Args) -> Result<()> {
             };
             let next_item = if !done_today {
                 let mut item = item;
-                item.next_notification = args.notify_again.next_date(crate::utils::time::now_local());
+                item.next_notification =
+                    args.notify_again.next_date(crate::utils::time::now_local());
                 item
             } else {
                 item.into_next_notification(crate::utils::time::now_local())

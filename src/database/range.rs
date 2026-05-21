@@ -4,7 +4,7 @@ use std::ops::{Bound, RangeBounds};
 use anyhow::Result;
 use time::OffsetDateTime;
 
-use super::{iter, Entry, Span};
+use super::{Entry, Span, iter};
 
 pub struct TimeRange {
     pub from: Option<OffsetDateTime>,
