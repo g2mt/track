@@ -166,15 +166,14 @@ pub fn run_daemon(args: Args) -> Result<()> {
                 let now = crate::utils::time::now_local();
                 let today_start = now.replace_time(Time::MIDNIGHT);
                 let today_end = today_start.saturating_add(time::Duration::DAY);
-                let goal: Option<u64> =
-                    info.data(&cat).and_then(|d| d.goal.map(|g| g.get()));
+                let goal: Option<u64> = info.data(&cat).and_then(|d| d.goal.map(|g| g.get()));
                 let total: u64 = db
                     .entries()
                     .filter_map(|r| match r {
                         Ok((_, entry)) if entry.category == cat => entry
                             .start_time_local()
                             .ok()
-                            .filter(|ts| *ts >= today_start && *ts < today_end)
+                            .filter(|dt| *dt >= today_start && *dt < today_end)
                             .map(|_| entry.elapsed_seconds()),
                         _ => None,
                     })
