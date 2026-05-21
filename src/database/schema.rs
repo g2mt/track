@@ -174,9 +174,31 @@ pub struct CategoryData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notify_every: Option<Frequency>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_notification: Option<NonZeroU64>,
+    next_notification: Option<NonZeroU64>,
     #[serde(skip_serializing_if = "CategoryType::is_duration", default)]
     pub r#type: CategoryType,
+}
+
+impl CategoryData {
+    pub fn next_notification_local(&self) -> Option<OffsetDateTime> {
+        if let Some(ts) = self.next_notification {
+            match OffsetDateTime::from_unix_timestamp(ts.get() as _) {
+                Ok(dt) => Some(utils::time::to_local_offset(dt)),
+                Err(_) => None,
+            }
+        } else {
+            None
+        }
+    }
+
+    pub fn set_next_notification_local(&mut self, dt: Option<OffsetDateTime>) {
+        if let Some(dt) = dt {
+            self.next_notification =
+                NonZeroU64::new(dt.to_offset(UtcOffset::UTC).unix_timestamp() as _);
+        } else {
+            self.next_notification = None;
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Default)]

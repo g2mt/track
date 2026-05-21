@@ -1,5 +1,4 @@
 use std::collections::BinaryHeap;
-use std::num::NonZeroU64;
 use std::process::Command;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::Duration;
@@ -62,13 +61,10 @@ fn build_heap(info: &Info, now: OffsetDateTime) -> BinaryHeap<ScheduleItem> {
                 next_notification: OffsetDateTime::UNIX_EPOCH,
                 freq: freq.clone(),
             };
-            let item = if let Some(ts) = data.next_notification {
-                match OffsetDateTime::from_unix_timestamp(ts.get() as i64) {
-                    Ok(dt) => ScheduleItem {
-                        next_notification: dt,
-                        ..item
-                    },
-                    Err(_) => item.into_next_notification(now),
+            let item = if let Some(dt) = data.next_notification_local() {
+                ScheduleItem {
+                    next_notification: dt,
+                    ..item
                 }
             } else {
                 item.into_next_notification(now)
@@ -190,8 +186,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
 
             // Record next notification time
             if let Some(data) = info.data_mut(&cat) {
-                data.next_notification =
-                    NonZeroU64::new(next_item.next_notification.unix_timestamp() as u64);
+                data.set_next_notification_local(Some(next_item.next_notification));
                 if let Err(e) = db.write_info(&info) {
                     println!("{cat}: failed to save next_notification: {e}");
                 }

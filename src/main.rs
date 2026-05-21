@@ -219,12 +219,10 @@ fn main() -> Result<()> {
         let mut db = args.open_database(true)?;
         let mut info = db.read_info()?.unwrap_or_default();
         let mut found = false;
-        let today_midnight = OffsetDateTime::now_local()?
-            .replace_time(time::Time::MIDNIGHT)
-            .unix_timestamp() as u64;
+        let today_midnight = crate::utils::time::now_local().replace_time(time::Time::MIDNIGHT);
         for (cat, data) in info.iter_mut() {
             if cm.matches(cat) {
-                data.next_notification = std::num::NonZeroU64::new(today_midnight);
+                data.set_next_notification_local(Some(today_midnight));
                 found = true;
                 if std::io::stdout().is_terminal() {
                     println!(
