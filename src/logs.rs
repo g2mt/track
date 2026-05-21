@@ -55,14 +55,16 @@ pub fn show_logs(args: Args) -> Result<()> {
             .map(|d| matches!(d.r#type, CategoryType::Duration))
             .unwrap_or(true);
 
-        let duration = entry.end_time - entry.start_time;
+        let duration = entry.elapsed_seconds();
         if is_duration {
-            *category_durations.entry(entry.category).or_insert(0) += duration;
+            *category_durations
+                .entry(entry.category.clone())
+                .or_insert(0) += duration;
         } else {
-            *category_counts.entry(entry.category).or_insert(0) += 1;
+            *category_counts.entry(entry.category.clone()).or_insert(0) += 1;
         }
 
-        let ts = OffsetDateTime::from_unix_timestamp(entry.start_time as i64)?;
+        let ts = entry.start_time_local()?;
         heatmap_durations.add_entry(ts, duration);
 
         tail_span = tail_span.or(Some(span));

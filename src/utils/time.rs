@@ -1,6 +1,30 @@
+use std::sync::{LazyLock, OnceLock};
+
 use anyhow::Result;
 use humantime::parse_rfc3339_weak;
-use time::{Duration, Month, OffsetDateTime, Time};
+use time::{Duration, Month, OffsetDateTime, Time, UtcOffset};
+
+static LOCAL_OFFSET: OnceLock<UtcOffset> = OnceLock::new();
+
+pub fn init_local_offset() {
+    LOCAL_OFFSET
+        .set(match UtcOffset::current_local_offset() {
+            Ok(offset) => offset,
+            Err(_) => {
+                eprintln!("Cannot determine local timezone, falling back to UTC");
+                UtcOffset::from_hms(0, 0, 0).unwrap()
+            }
+        })
+        .unwrap();
+}
+
+pub fn to_local_offset(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.to_offset(*LOCAL_OFFSET.get().unwrap())
+}
+
+pub fn now_local() -> OffsetDateTime {
+    OffsetDateTime::now_utc().to_offset(*LOCAL_OFFSET.get().unwrap())
+}
 
 pub fn parse_datetime(s: &str) -> Result<OffsetDateTime> {
     match s {

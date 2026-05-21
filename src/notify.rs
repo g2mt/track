@@ -104,7 +104,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
 
     let mut db = args.db;
     let mut info = db.try_lock(|db| Ok(db.read_info()?.unwrap_or_default()))?;
-    let now = OffsetDateTime::now_local()?;
+    let now = crate::utils::time::now_local();
     let mut heap = build_heap(&info, now);
 
     if heap.is_empty() {
@@ -135,10 +135,10 @@ pub fn run_daemon(args: Args) -> Result<()> {
         let reloaded;
         (db, reloaded) = db.reload()?;
         if reloaded {
-            println!("[{}] reloaded", OffsetDateTime::now_local()?);
+            println!("[{}] reloaded", crate::utils::time::now_local());
             info = db.try_lock(|db| Ok(db.read_info()?.unwrap_or_default()))?;
         }
-        let now = OffsetDateTime::now_local()?;
+        let now = crate::utils::time::now_local();
         heap = build_heap(&info, now);
 
         // Nothing due yet, keep polling
@@ -164,15 +164,16 @@ pub fn run_daemon(args: Args) -> Result<()> {
         db.try_lock(|db| {
             // Write to database and update notification times
             let done_today = {
-                let now = OffsetDateTime::now_local()?;
+                let now = crate::utils::time::now_local();
                 let today_start = now.replace_time(Time::MIDNIGHT);
                 let today_end = today_start.saturating_add(time::Duration::DAY);
-                let start = today_start.unix_timestamp() as u64;
-                let end = today_end.unix_timestamp() as u64;
                 let mut iter = db.entries();
                 let done_today = iter.any(|r| match r {
                     Ok((_, entry)) => {
-                        entry.category == cat && entry.start_time >= start && entry.start_time < end
+                        entry.category == cat
+                            && entry
+                                .start_time_local()
+                                .is_ok_and(|ts| ts >= today_start && ts < today_end)
                     }
                     Err(_) => false,
                 });
@@ -180,10 +181,10 @@ pub fn run_daemon(args: Args) -> Result<()> {
             };
             let next_item = if !done_today {
                 let mut item = item;
-                item.next_notification = args.notify_again.next_date(OffsetDateTime::now_local()?);
+                item.next_notification = args.notify_again.next_date(crate::utils::time::now_local());
                 item
             } else {
-                item.into_next_notification(OffsetDateTime::now_local()?)
+                item.into_next_notification(crate::utils::time::now_local())
             };
 
             // Record next notification time
@@ -196,7 +197,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
             }
             println!(
                 "[{}] next {} on {}",
-                OffsetDateTime::now_local()?,
+                crate::utils::time::now_local(),
                 next_item.category,
                 next_item.next_notification
             );

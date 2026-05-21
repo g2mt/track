@@ -3,10 +3,13 @@ use std::num::NonZeroU64;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::Result;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use time::{OffsetDateTime, Time, Weekday};
+use time::{OffsetDateTime, Time, UtcOffset, Weekday};
 
 use crate::args::CategoryMatch;
+use crate::utils;
+use crate::utils::time::to_local_offset;
 
 #[derive(Debug, Clone, PartialEq, Default, clap::ValueEnum)]
 pub enum CategoryType {
@@ -244,12 +247,56 @@ impl Info {
     }
 }
 
+/// An entry in the database.
+///
+/// For consistency with the CLI, only local time setters are given.
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entry {
     /// Category of the entry
     pub category: Arc<str>,
-    /// UTC timestamp for when the Entry starts
-    pub start_time: u64,
-    /// UTC timestamp for when the Entry ends
-    pub end_time: u64,
+    /// UTC timestamp for when the Entry starts. Only modified by raw database functions
+    pub(super) start_time: u64,
+    /// UTC timestamp for when the Entry ends. Only modified by raw database functions
+    pub(super) end_time: u64,
+}
+
+impl Entry {
+    pub fn zeros(category: Arc<str>) -> Self {
+        Self {
+            category,
+            start_time: 0,
+            end_time: 0,
+        }
+    }
+
+    pub fn new_local(category: Arc<str>, start: OffsetDateTime, end: OffsetDateTime) -> Self {
+        let mut entry = Self::zeros(category);
+        entry.set_start_time_local(start);
+        entry.set_end_time_local(end);
+        entry
+    }
+
+    pub fn start_time_local(&self) -> Result<OffsetDateTime> {
+        Ok(utils::time::to_local_offset(
+            OffsetDateTime::from_unix_timestamp(self.start_time as _)?,
+        ))
+    }
+
+    pub fn set_start_time_local(&mut self, dt: OffsetDateTime) {
+        self.start_time = dt.to_offset(UtcOffset::UTC).unix_timestamp() as _
+    }
+
+    pub fn end_time_local(&self) -> Result<OffsetDateTime> {
+        Ok(utils::time::to_local_offset(
+            OffsetDateTime::from_unix_timestamp(self.end_time as _)?,
+        ))
+    }
+
+    pub fn set_end_time_local(&mut self, dt: OffsetDateTime) {
+        self.end_time = dt.to_offset(UtcOffset::UTC).unix_timestamp() as _
+    }
+
+    pub fn elapsed_seconds(&self) -> u64 {
+        self.end_time.saturating_sub(self.start_time)
+    }
 }

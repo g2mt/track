@@ -1,10 +1,10 @@
 use std::io::Write;
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::{Duration, SystemTime};
 
 use anyhow::Result;
 use humantime::format_duration;
 use terminal_size::terminal_size;
+use time::Duration;
 
 use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
@@ -20,14 +20,10 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         })?;
     }
 
-    let start = SystemTime::now();
-    let mut elapsed = Duration::default();
+    let start = crate::utils::time::now_local();
+    let mut elapsed = Duration::ZERO;
     let mut max_secs = 0.0f64;
-    let mut db_entry = Entry {
-        category: category.clone(),
-        start_time: 0,
-        end_time: 0,
-    };
+    let mut db_entry = Entry::zeros(category.clone());
     let early_exit = db.try_lock(|db| {
         let mut info = db.read_info()?.unwrap_or_default();
         info.add_category(category.clone());
@@ -37,12 +33,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
             .map(|d| d.r#type == CategoryType::Oneshot)
             .unwrap_or(false)
         {
-            let now = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
-            let entry = Entry {
-                category: category.clone(),
-                start_time: now,
-                end_time: now + 1,
-            };
+            let entry = Entry::new_local(category.clone(), start, start + Duration::seconds(1));
             db.append_entry(&entry)?;
             println!(
                 "Recorded {}{}{}",
@@ -61,7 +52,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         for res in db.latest_entries_range(today_start..) {
             let (_, entry) = res?;
             if entry.category.as_ref() == category.as_ref() {
-                elapsed += Duration::from_secs(entry.end_time - entry.start_time);
+                elapsed += Duration::seconds(entry.elapsed_seconds() as i64);
             }
         }
         max_secs = info
@@ -70,9 +61,8 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
             .map(|goal| goal.get())
             .unwrap_or(3600) as f64;
 
-        let start_time = start.duration_since(std::time::UNIX_EPOCH)?.as_secs();
-        db_entry.start_time = start_time;
-        db_entry.end_time = start_time;
+        db_entry.set_start_time_local(start);
+        db_entry.set_end_time_local(start);
         db.append_entry(&db_entry)?;
 
         Ok(false)
@@ -85,16 +75,18 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
     let mut stop = lock.lock().unwrap();
     while !*stop {
         let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
-        elapsed = elapsed.saturating_add(Duration::from_secs(1));
-        let elapsed_secs = elapsed.as_secs_f64();
+        elapsed = elapsed.saturating_add(Duration::seconds(1));
+        let elapsed_secs = elapsed.as_seconds_f64();
         let elapsed_str = if elapsed_secs < max_secs {
             format!(
                 "{} ({} remaining)",
-                format_duration(elapsed),
-                format_duration(Duration::from_secs((max_secs - elapsed_secs) as _))
+                humantime::format_duration(elapsed.unsigned_abs()),
+                format_duration(std::time::Duration::from_secs(
+                    (max_secs - elapsed_secs) as u64
+                ))
             )
         } else {
-            format!("{}", format_duration(elapsed))
+            format!("{}", humantime::format_duration(elapsed.unsigned_abs()),)
         };
 
         // Build content: category, padding, elapsed_str
@@ -106,7 +98,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         }
         content.extend(elapsed_str.chars());
 
-        // Print progress bar
+        // Print progress bar that wraps around every time the goal is reached
         let filled =
             (((elapsed_secs / max_secs).fract() * term_w as f64) as usize).clamp(0, term_w);
         let mut line = String::with_capacity(term_w + 64);
@@ -129,13 +121,13 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         print!("{}", line);
         std::io::stdout().flush()?;
 
-        stop = cvar.wait_timeout(stop, Duration::from_secs(1)).unwrap().0;
+        stop = cvar
+            .wait_timeout(stop, std::time::Duration::from_secs(1))
+            .unwrap()
+            .0;
 
-        if elapsed.as_secs() % 300 == 0 {
-            let end_time = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)?
-                .as_secs();
-            db_entry.end_time = end_time;
+        if elapsed.whole_seconds() % 300 == 0 {
+            db_entry.set_end_time_local(crate::utils::time::now_local());
             db.try_lock(|db| {
                 db.update_last_entry(&db_entry)?;
                 Ok(())
@@ -145,13 +137,8 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
     drop(stop);
 
     // One last save
-    let end_time = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_secs();
-    db.try_lock(|db| {
-        db_entry.end_time = end_time;
-        db.update_last_entry(&db_entry)
-    })?;
+    db_entry.set_end_time_local(crate::utils::time::now_local());
+    db.try_lock(|db| db.update_last_entry(&db_entry))?;
 
     // Move past the progress bar line
     print!("\n");

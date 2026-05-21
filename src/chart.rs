@@ -31,7 +31,7 @@ pub fn show_chart(args: Args) -> Result<()> {
 
     let info = db.read_info()?.unwrap_or_default();
 
-    let concrete_to = to.unwrap_or_else(|| OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()));
+    let concrete_to = to.unwrap_or_else(|| crate::utils::time::now_local());
     let concrete_from = from.unwrap_or_else(|| concrete_to - time::Duration::days(14));
 
     let (term_width, term_height) = terminal_size::terminal_size()
@@ -68,14 +68,13 @@ pub fn show_chart(args: Args) -> Result<()> {
             continue;
         }
 
-        let ts = OffsetDateTime::from_unix_timestamp(entry.start_time as i64)?;
+        let ts = entry.start_time_local()?;
         let day = ts.replace_time(time::Time::MIDNIGHT);
         let offset = (day - concrete_from).whole_days() as usize;
         // Shift column right by the centering offset so bars appear centered.
         let col = col_offset + offset / days_per_col;
         if col < inner_width {
-            let duration = entry.end_time - entry.start_time;
-            columns[col] += duration;
+            columns[col] += entry.elapsed_seconds();
         }
     }
 
@@ -88,7 +87,12 @@ pub fn show_chart(args: Args) -> Result<()> {
     let max_col = *columns.iter().max().unwrap_or(&1);
 
     let align = Align::Center;
-    crate::utils::time::print_date_range_header(&align, from.as_ref(), to.as_ref(), term_width as u16);
+    crate::utils::time::print_date_range_header(
+        &align,
+        from.as_ref(),
+        to.as_ref(),
+        term_width as u16,
+    );
 
     let top_border: String = std::iter::once(TOP_LEFT)
         .chain(std::iter::repeat(HORIZ).take(inner_width))

@@ -22,6 +22,8 @@ mod track;
 mod utils;
 
 fn main() -> Result<()> {
+    utils::time::init_local_offset();
+
     let args = Args::parse();
 
     if let Some(shell) = args.completion {
