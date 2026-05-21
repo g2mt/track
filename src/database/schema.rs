@@ -9,7 +9,6 @@ use time::{OffsetDateTime, Time, UtcOffset, Weekday};
 
 use crate::args::CategoryMatch;
 use crate::utils;
-use crate::utils::time::to_local_offset;
 
 #[derive(Debug, Clone, PartialEq, Default, clap::ValueEnum)]
 pub enum CategoryType {
@@ -260,6 +259,7 @@ pub struct Entry {
     pub(super) end_time: u64,
 }
 
+#[allow(dead_code)]
 impl Entry {
     pub fn zeros(category: Arc<str>) -> Self {
         Self {
