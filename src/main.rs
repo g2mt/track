@@ -123,15 +123,15 @@ fn main() -> Result<()> {
 
     if args.chart {
         let log_from = if args.logs.today {
-            Some(utils::time::today()?)
+            Some(utils::time::today())
         } else if args.logs.yesterday {
-            Some(utils::time::yesterday()?)
+            Some(utils::time::yesterday())
         } else if args.logs.this_week {
-            Some(utils::time::this_week()?)
+            Some(utils::time::this_week())
         } else if args.logs.this_month {
-            Some(utils::time::this_month()?)
+            Some(utils::time::this_month())
         } else if args.logs.this_year {
-            Some(utils::time::this_year()?)
+            Some(utils::time::this_year())
         } else {
             args.from
                 .as_deref()
@@ -156,19 +156,19 @@ fn main() -> Result<()> {
     let mut log_from: Option<OffsetDateTime> = None;
     let mut log_to: Option<OffsetDateTime> = None;
     let show_logs = if args.logs.today {
-        log_from = Some(utils::time::today()?);
+        log_from = Some(utils::time::today());
         true
     } else if args.logs.yesterday {
-        log_from = Some(utils::time::yesterday()?);
+        log_from = Some(utils::time::yesterday());
         true
     } else if args.logs.this_week {
-        log_from = Some(utils::time::this_week()?);
+        log_from = Some(utils::time::this_week());
         true
     } else if args.logs.this_month {
-        log_from = Some(utils::time::this_month()?);
+        log_from = Some(utils::time::this_month());
         true
     } else if args.logs.this_year {
-        log_from = Some(utils::time::this_year()?);
+        log_from = Some(utils::time::this_year());
         true
     } else if args.from.is_some() || args.to.is_some() {
         log_from = args

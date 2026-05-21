@@ -48,7 +48,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         db.write_info(&info)?;
 
         // Load initial elapsed from today's entries for this category
-        let today_start = utils::time::today()?;
+        let today_start = utils::time::today();
         for res in db.latest_entries_range(today_start..) {
             let (_, entry) = res?;
             if entry.category.as_ref() == category.as_ref() {

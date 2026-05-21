@@ -28,65 +28,52 @@ pub fn now_local() -> OffsetDateTime {
 
 pub fn parse_datetime(s: &str) -> Result<OffsetDateTime> {
     match s {
-        "today" => Ok(OffsetDateTime::now_local()?.replace_time(Time::MIDNIGHT)),
-        "yesterday" => Ok(OffsetDateTime::now_local()?
+        "today" => Ok(now_local().replace_time(Time::MIDNIGHT)),
+        "yesterday" => Ok(now_local()
             .replace_time(Time::MIDNIGHT)
             .saturating_sub(Duration::DAY)),
-        "this-week" => {
-            let now = OffsetDateTime::now_local()?;
-            let week_start = now.replace_time(Time::MIDNIGHT)
-                - Duration::days(now.weekday().number_from_monday() as i64 - 1);
-            Ok(week_start)
-        }
-        "this-month" => {
-            let now = OffsetDateTime::now_local()?;
-            Ok(now.replace_day(1).unwrap().replace_time(Time::MIDNIGHT))
-        }
-        "this-year" => {
-            let now = OffsetDateTime::now_local()?;
-            Ok(
-                time::Date::from_calendar_date(now.year(), Month::January, 1)
-                    .unwrap()
-                    .with_time(Time::MIDNIGHT)
-                    .assume_offset(now.offset()),
-            )
-        }
+        "this-week" => Ok(now_local().replace_time(Time::MIDNIGHT)
+            - Duration::days(now_local().weekday().number_from_monday() as i64 - 1)),
+        "this-month" => Ok(now_local()
+            .replace_day(1)
+            .unwrap()
+            .replace_time(Time::MIDNIGHT)),
+        "this-year" => Ok(
+            time::Date::from_calendar_date(now_local().year(), Month::January, 1)
+                .unwrap()
+                .with_time(Time::MIDNIGHT)
+                .assume_offset(now_local().offset()),
+        ),
         _ => parse_rfc3339_weak(s).map(Into::into).map_err(Into::into),
     }
 }
 
-pub fn today() -> Result<OffsetDateTime> {
-    let now = OffsetDateTime::now_local()?;
-    let start = now.replace_time(Time::MIDNIGHT);
-    Ok(start)
+pub fn today() -> OffsetDateTime {
+    now_local().replace_time(Time::MIDNIGHT)
 }
 
-pub fn yesterday() -> Result<OffsetDateTime> {
-    let now = OffsetDateTime::now_local()?;
-    let today_start = now.replace_time(Time::MIDNIGHT);
-    Ok(today_start - Duration::DAY)
+pub fn yesterday() -> OffsetDateTime {
+    now_local().replace_time(Time::MIDNIGHT) - Duration::DAY
 }
 
-pub fn this_week() -> Result<OffsetDateTime> {
-    let now = OffsetDateTime::now_local()?;
-    let week_start = now.replace_time(Time::MIDNIGHT)
-        - Duration::days(now.weekday().number_from_monday() as i64 - 1);
-    Ok(week_start)
+pub fn this_week() -> OffsetDateTime {
+    let now = now_local();
+    now.replace_time(Time::MIDNIGHT) - Duration::days(now.weekday().number_from_monday() as i64 - 1)
 }
 
-pub fn this_month() -> Result<OffsetDateTime> {
-    let now = OffsetDateTime::now_local()?;
-    let from = now.replace_day(1).unwrap().replace_time(Time::MIDNIGHT);
-    Ok(from)
+pub fn this_month() -> OffsetDateTime {
+    now_local()
+        .replace_day(1)
+        .unwrap()
+        .replace_time(Time::MIDNIGHT)
 }
 
-pub fn this_year() -> Result<OffsetDateTime> {
-    let now = OffsetDateTime::now_local()?;
-    let from = time::Date::from_calendar_date(now.year(), Month::January, 1)
+pub fn this_year() -> OffsetDateTime {
+    let now = now_local();
+    time::Date::from_calendar_date(now.year(), Month::January, 1)
         .unwrap()
         .with_time(Time::MIDNIGHT)
-        .assume_offset(now.offset());
-    Ok(from)
+        .assume_offset(now.offset())
 }
 
 pub fn print_date_range_header(
