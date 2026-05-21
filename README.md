@@ -4,7 +4,7 @@ Simple time-tracking CLI utility
 
 ## Usage
 
-The category name being manipulated is always the positional argument at the end.
+The category name being manipulated is always the first positional argument.
 
 **Start tracking a category.** This command starts the timer in the foreground, showing a 1-line progress bar. Press Ctrl-C to exit the tracking.
 
@@ -12,7 +12,7 @@ The category name being manipulated is always the positional argument at the end
 track project1
 ```
 
-When the tracking ends, then the new entry is appended to the time tracking file.
+When tracking ends, a new entry is appended to the time tracking file.
 
 **Set daily goals.** *track* uses the [humantime](https://docs.rs/humantime/latest/humantime/) module to parse human readable time. Pass in the human time in the suitable format.
 
@@ -32,6 +32,8 @@ track --this-month
 track --this-year
 track --from time [--to time]
 ```
+
+**Show charts.** The `--chart` argument can be passed to show a bar chart for the amount of work done in a given time range.
 
 ### Additional parameters
 
