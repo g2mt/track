@@ -60,10 +60,10 @@ The first line is always an object containing additional information (goals, cat
 
 The first line is padded by white spaces, such that the length of the first line is a multiple of 128. For instance, if the object is serialized to 200 characters, then the first line will end with $$256 - 200 - 1 = 55$$ white space characters, and the new line `\n` character.
 
-Subsequent lines are arrays representing time entries, and are not padded by white spaces. Time is always represented using Unix timestamps in UTC.
+Subsequent lines are objects representing time entries, and are not padded by white spaces. Time is always represented using Unix timestamps in UTC.
 
 ```js
-["category", start_time, end_time]
+{"category":"name","start_time":1234567,"end_time":1234567}
 ```
 
 *track* never ends the JSONL file with a new line. When appending a new entry, then the JSON encoded entry is appended, and the new line character is added.
