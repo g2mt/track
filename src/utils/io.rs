@@ -1,7 +1,8 @@
 use std::fs::{File, TryLockError};
 use std::io::{self, Read, Seek, Write};
 use std::path::PathBuf;
-use std::time::SystemTime;
+use std::thread::sleep;
+use std::time::{Duration, SystemTime};
 
 pub mod traits {
     pub trait Truncate {
@@ -23,9 +24,20 @@ pub struct FileWithPath {
 }
 
 impl FileWithPath {
+    fn try_lock_with_retry(file: &File) -> Result<(), TryLockError> {
+        for attempt in 0..3 {
+            match file.try_lock() {
+                Ok(()) => return Ok(()),
+                Err(e) if attempt < 2 => sleep(Duration::from_secs(5)),
+                Err(e) => return Err(e),
+            }
+        }
+        unreachable!()
+    }
+
     pub fn open(path: PathBuf, options: std::fs::OpenOptions) -> io::Result<Self> {
         let file = options.open(&path)?;
-        file.try_lock()?;
+        Self::try_lock_with_retry(&file)?;
         let metadata = file.metadata()?;
         let snap = (metadata.modified().ok(), metadata.len());
         Ok(Self {
@@ -40,7 +52,7 @@ impl FileWithPath {
     }
 
     pub fn try_lock(&self) -> Result<(), TryLockError> {
-        self.file.try_lock()
+        Self::try_lock_with_retry(&self.file)
     }
 
     pub fn unlock(&self) -> io::Result<()> {
