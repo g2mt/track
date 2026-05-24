@@ -20,16 +20,19 @@ fn range_all() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 50,
             end_time: 60,
@@ -61,16 +64,19 @@ fn range_from_bound() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 50,
             end_time: 60,
@@ -101,16 +107,19 @@ fn range_to_bound() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 50,
             end_time: 60,
@@ -141,16 +150,19 @@ fn range_both_bounds() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 50,
             end_time: 60,
@@ -181,11 +193,13 @@ fn range_empty() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 30,
             end_time: 40,
@@ -213,6 +227,7 @@ fn range_returns_spans() {
     db.write_info(&Info::default()).unwrap();
 
     db.append_entry(&Entry {
+        is_being_tracked: false,
         category: "x".into(),
         start_time: 100,
         end_time: 200,

@@ -96,6 +96,7 @@ fn write_info_new_line_longer_shifts_rest() {
 
     // Append an entry
     let entry = Entry {
+        is_being_tracked: false,
         category: "a".into(),
         start_time: 1,
         end_time: 2,
@@ -149,6 +150,7 @@ fn write_info_new_line_shorter_shifts_rest() {
 
     // Append an entry
     let entry = Entry {
+        is_being_tracked: false,
         category: "a".into(),
         start_time: 1,
         end_time: 2,

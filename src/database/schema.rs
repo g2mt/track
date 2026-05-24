@@ -288,6 +288,7 @@ pub struct Entry {
     pub(super) end_time: u64,
     /// Flag to check if the current entry is the target of a track command
     #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default)]
     pub is_being_tracked: bool,
 }
 

@@ -14,11 +14,13 @@ fn append_and_replace_entry() {
     db.write_info(&Info::default()).unwrap();
 
     let entry1 = Entry {
+        is_being_tracked: false,
         category: "c1".into(),
         start_time: 10,
         end_time: 20,
     };
     let entry2 = Entry {
+        is_being_tracked: false,
         category: "c2".into(),
         start_time: 30,
         end_time: 40,
@@ -28,6 +30,7 @@ fn append_and_replace_entry() {
     let entry2_span = db.append_entry(&entry2).unwrap();
 
     let entry2_updated = Entry {
+        is_being_tracked: false,
         category: "a".repeat(200).into(),
         start_time: 30,
         end_time: 50,
@@ -51,26 +54,31 @@ fn append_and_replace_middle_entry() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "c1".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "c2".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c3".into(),
             start_time: 50,
             end_time: 60,
         },
         Entry {
+            is_being_tracked: false,
             category: "c4".into(),
             start_time: 70,
             end_time: 80,
         },
         Entry {
+            is_being_tracked: false,
             category: "c5".into(),
             start_time: 90,
             end_time: 100,
@@ -83,6 +91,7 @@ fn append_and_replace_middle_entry() {
     }
 
     let entry2_updated = Entry {
+        is_being_tracked: false,
         category: "a".repeat(200).into(),
         start_time: 30,
         end_time: 45,
@@ -115,16 +124,19 @@ fn iterate_backwards() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "c1".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "c2".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c3".into(),
             start_time: 50,
             end_time: 60,
@@ -153,21 +165,25 @@ fn iterate_backwards_and_forwards() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "c1".into(),
             start_time: 10,
             end_time: 20,
         },
         Entry {
+            is_being_tracked: false,
             category: "c2".into(),
             start_time: 30,
             end_time: 40,
         },
         Entry {
+            is_being_tracked: false,
             category: "c3".into(),
             start_time: 50,
             end_time: 60,
         },
         Entry {
+            is_being_tracked: false,
             category: "c4".into(),
             start_time: 70,
             end_time: 80,
@@ -205,26 +221,31 @@ fn remove_span_removes_middle_entries() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 0,
             end_time: 1,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 2,
             end_time: 3,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 4,
             end_time: 5,
         },
         Entry {
+            is_being_tracked: false,
             category: "d".into(),
             start_time: 6,
             end_time: 7,
         },
         Entry {
+            is_being_tracked: false,
             category: "e".into(),
             start_time: 8,
             end_time: 9,
@@ -280,26 +301,31 @@ fn remove_span_removes_head_entries() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 0,
             end_time: 1,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 2,
             end_time: 3,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 4,
             end_time: 5,
         },
         Entry {
+            is_being_tracked: false,
             category: "d".into(),
             start_time: 6,
             end_time: 7,
         },
         Entry {
+            is_being_tracked: false,
             category: "e".into(),
             start_time: 8,
             end_time: 9,
@@ -354,26 +380,31 @@ fn remove_span_removes_tail_entries() {
 
     let entries = [
         Entry {
+            is_being_tracked: false,
             category: "a".into(),
             start_time: 0,
             end_time: 1,
         },
         Entry {
+            is_being_tracked: false,
             category: "b".into(),
             start_time: 2,
             end_time: 3,
         },
         Entry {
+            is_being_tracked: false,
             category: "c".into(),
             start_time: 4,
             end_time: 5,
         },
         Entry {
+            is_being_tracked: false,
             category: "d".into(),
             start_time: 6,
             end_time: 7,
         },
         Entry {
+            is_being_tracked: false,
             category: "e".into(),
             start_time: 8,
             end_time: 9,
