@@ -315,6 +315,10 @@ impl Entry {
         self.start_time = dt.to_offset(UtcOffset::UTC).unix_timestamp() as _
     }
 
+    pub fn has_same_start_time(&self, other: &Self) -> bool {
+        self.start_time == other.start_time
+    }
+
     pub fn end_time_local(&self) -> Result<OffsetDateTime> {
         Ok(utils::time::to_local_offset(
             OffsetDateTime::from_unix_timestamp(self.end_time as _)?,

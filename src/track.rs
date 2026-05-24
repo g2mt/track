@@ -14,7 +14,9 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         db.try_lock(|db| {
             for res in db.entries().rev().take(10) {
                 let (span, entry) = res?;
-                if entry.category.as_ref() == db_entry.category.as_ref() {
+                if entry.category.as_ref() == db_entry.category.as_ref()
+                    && entry.has_same_start_time(db_entry)
+                {
                     db.replace_entry(span, db_entry)?;
                     return Ok(());
                 }
