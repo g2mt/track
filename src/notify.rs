@@ -7,6 +7,7 @@ use anyhow::Result;
 use time::{OffsetDateTime, Time};
 
 use crate::database::{Frequency, Info, ReloadableDb};
+use crate::track;
 
 fn command_exists(cmd: &str) -> bool {
     if cmd.contains('/') {
@@ -152,7 +153,7 @@ pub fn run_daemon(args: Args) -> Result<()> {
             Ok(db
                 .entries()
                 .rev()
-                .take(10)
+                .take(track::LATEST_ENTRIES_TRACKED)
                 .filter_map(|r| r.ok())
                 .any(|(_, entry)| entry.category == item.category && entry.is_being_tracked))
         })?;

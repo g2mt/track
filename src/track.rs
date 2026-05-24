@@ -9,10 +9,12 @@ use time::Duration;
 use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
 
+pub const LATEST_ENTRIES_TRACKED: usize = 10;
+
 pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
     fn replace_older_entry(db: &mut ReloadableDb, db_entry: &Entry) -> Result<()> {
         db.try_lock(|db| {
-            for res in db.entries().rev().take(10) {
+            for res in db.entries().rev().take(LATEST_ENTRIES_TRACKED) {
                 let (span, entry) = res?;
                 if entry.category.as_ref() == db_entry.category.as_ref()
                     && entry.has_same_start_time(db_entry)
