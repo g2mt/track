@@ -10,6 +10,21 @@ use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
 
 pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
+    fn save_entry(db: &mut ReloadableDb, db_entry: &Entry) -> Result<()> {
+        db.try_lock(|db| {
+            let span = db
+                .entries()
+                .rev()
+                .filter_map(|r| r.ok())
+                .find(|(_, e)| e.category.as_ref() == db_entry.category.as_ref())
+                .map(|(s, _)| s);
+            if let Some(span) = span {
+                db.replace_entry(span, db_entry)?;
+            }
+            Ok(())
+        })
+    }
+
     let exited = Arc::new((Mutex::new(false), Condvar::new()));
     {
         let exited = exited.clone();
@@ -128,17 +143,14 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
 
         if elapsed.whole_seconds() % 300 == 0 {
             db_entry.set_end_time_local(crate::utils::time::now_local());
-            db.try_lock(|db| {
-                db.update_last_entry(&db_entry)?;
-                Ok(())
-            })?;
+            save_entry(&mut db, &db_entry)?;
         }
     }
     drop(stop);
 
     // One last save
     db_entry.set_end_time_local(crate::utils::time::now_local());
-    db.try_lock(|db| db.update_last_entry(&db_entry))?;
+    save_entry(&mut db, &db_entry)?;
 
     // Move past the progress bar line
     print!("\n");

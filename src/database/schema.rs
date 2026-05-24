@@ -171,10 +171,17 @@ impl Frequency {
 pub struct CategoryData {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub goal: Option<NonZeroU64>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub notify_every: Option<Frequency>,
+
+    #[cfg(not(test))]
     #[serde(skip_serializing_if = "Option::is_none")]
     next_notification: Option<NonZeroU64>,
+    #[cfg(test)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_notification: Option<NonZeroU64>,
+
     #[serde(skip_serializing_if = "CategoryType::is_duration", default)]
     pub r#type: CategoryType,
 }

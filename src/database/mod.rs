@@ -48,6 +48,7 @@ impl ReloadableDb {
     pub fn reload(mut self) -> std::io::Result<(Self, bool)> {
         if self.db.backing.changed() {
             let (path, options) = self.db.backing.into_open_args();
+            // initial lock ensures that the metadata read by open isn't changed
             let file = FileWithPath::open(path, options)?;
             file.unlock()?;
             self.db = Database::new(file);

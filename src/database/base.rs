@@ -144,51 +144,38 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
         Ok(())
     }
 
-    /// Appends an entry as a new line at the end of the backing storage.
-    pub fn append_entry(&mut self, entry: &Entry) -> Result<()> {
+    /// Appends an entry as a new line at the end of the backing storage,
+    /// returning the byte span of the appended entry.
+    pub fn append_entry(&mut self, entry: &Entry) -> Result<Span> {
         self.backing.seek(SeekFrom::End(0))?;
+        let start = self.backing.stream_position()?;
         let json = serde_json::to_string(entry)?;
         self.backing.write_all(json.as_bytes())?;
         self.backing.write_all(b"\n")?;
-        Ok(())
+        let end = self.backing.stream_position()?;
+        Ok(Span::new(start, end))
     }
 
-    /// Replaces the last entry in the backing storage in-place.
-    pub fn update_last_entry(&mut self, entry: &Entry) -> Result<()> {
+    /// Replaces the entry in the span with a new entry in place, and may allocate new space in the
+    /// backing.
+    /// This function does not parse the older entry and assumes the
+    /// span correctly contains the contents of an older entry.
+    pub fn replace_entry(&mut self, span: Span, entry: &Entry) -> Result<()> {
         let json = serde_json::to_string(entry)?;
-        let entry_line = format!("{}\n", json);
-        let entry_bytes = entry_line.as_bytes();
+        let new_line = format!("{}\n", json);
+        let new_bytes = new_line.as_bytes();
 
-        let mut pos = self.backing.seek(SeekFrom::End(0))?;
-        while pos > 0 {
-            pos = self
-                .backing
-                .seek(SeekFrom::Current(-(BUFFER_SIZE as i64)))?;
-            let chunk_start = pos;
-            let mut buf = vec![0u8; BUFFER_SIZE.try_into().unwrap()];
-            let n = self.backing.read(&mut buf)?;
-            buf.truncate(n);
+        self.backing.seek(SeekFrom::Start(span.end()))?;
+        let mut rest = Vec::new();
+        self.backing.read_to_end(&mut rest)?;
 
-            let last_nl = buf
-                .iter()
-                .enumerate() // track byte indices
-                .rev() // iterate from end of buffer
-                .skip_while(|(_, b)| b.is_ascii_whitespace()) // skip trailing whitespace/newlines
-                .find(|(_, b)| **b == b'\n') // find the newline before the entry
-                .map(|(idx, _)| idx); // extract the index
+        self.backing.seek(SeekFrom::Start(span.start()))?;
+        self.backing.write_all(new_bytes)?;
+        self.backing.write_all(&rest)?;
 
-            if let Some(last_nl) = last_nl {
-                self.backing
-                    .seek(SeekFrom::Start(pos + (last_nl as u64) + 1))?;
-                self.backing.write_all(entry_bytes)?;
-                let stream_position = self.backing.stream_position()?;
-                self.backing.set_len(stream_position)?;
-                return Ok(());
-            } else {
-                // no new line character found, go to the previous chunk
-                pos = self.backing.seek(SeekFrom::Start(chunk_start))?;
-            }
-        }
+        let new_len = span.start() + new_bytes.len() as u64 + rest.len() as u64;
+        self.backing.set_len(new_len)?;
+
         Ok(())
     }
 

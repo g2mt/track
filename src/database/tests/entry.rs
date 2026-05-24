@@ -5,7 +5,7 @@ use super::super::{CategoryData, Database, Entry, Info, Span};
 use super::mock::MockFile;
 
 #[test]
-fn append_and_update_entry() {
+fn append_and_replace_entry() {
     let mut db: Database<MockFile> = Database::new(MockFile {
         data: RefCell::new(vec![]),
         pos: 0,
@@ -25,18 +25,82 @@ fn append_and_update_entry() {
     };
 
     db.append_entry(&entry1).unwrap();
-    db.append_entry(&entry2).unwrap();
+    let entry2_span = db.append_entry(&entry2).unwrap();
 
     let entry2_updated = Entry {
         category: "c2".into(),
         start_time: 30,
         end_time: 50,
     };
-    db.update_last_entry(&entry2_updated).unwrap();
+    db.replace_entry(entry2_span, &entry2_updated).unwrap();
 
     let mut iter = db.entries();
     assert_eq!(iter.next().unwrap().unwrap().1, entry1);
     assert_eq!(iter.next().unwrap().unwrap().1, entry2_updated);
+    assert!(iter.next().is_none());
+}
+
+#[test]
+fn append_and_replace_middle_entry() {
+    let mut db: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
+
+    db.write_info(&Info::default()).unwrap();
+
+    let entries = [
+        Entry {
+            category: "c1".into(),
+            start_time: 10,
+            end_time: 20,
+        },
+        Entry {
+            category: "c2".into(),
+            start_time: 30,
+            end_time: 40,
+        },
+        Entry {
+            category: "c3".into(),
+            start_time: 50,
+            end_time: 60,
+        },
+        Entry {
+            category: "c4".into(),
+            start_time: 70,
+            end_time: 80,
+        },
+        Entry {
+            category: "c5".into(),
+            start_time: 90,
+            end_time: 100,
+        },
+    ];
+
+    let mut spans = Vec::new();
+    for entry in &entries {
+        spans.push(db.append_entry(entry).unwrap());
+    }
+
+    let entry2_updated = Entry {
+        category: "c2".into(),
+        start_time: 30,
+        end_time: 45,
+    };
+    db.replace_entry(spans[1], &entry2_updated).unwrap();
+
+    let expected = [
+        &entries[0],
+        &entry2_updated,
+        &entries[2],
+        &entries[3],
+        &entries[4],
+    ];
+
+    let mut iter = db.entries();
+    for expected_entry in expected {
+        assert_eq!(iter.next().unwrap().unwrap().1, *expected_entry);
+    }
     assert!(iter.next().is_none());
 }
 
