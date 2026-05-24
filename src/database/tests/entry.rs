@@ -28,7 +28,7 @@ fn append_and_replace_entry() {
     let entry2_span = db.append_entry(&entry2).unwrap();
 
     let entry2_updated = Entry {
-        category: "c2".into(),
+        category: "a".repeat(200).into(),
         start_time: 30,
         end_time: 50,
     };
@@ -83,7 +83,7 @@ fn append_and_replace_middle_entry() {
     }
 
     let entry2_updated = Entry {
-        category: "c2".into(),
+        category: "a".repeat(200).into(),
         start_time: 30,
         end_time: 45,
     };
