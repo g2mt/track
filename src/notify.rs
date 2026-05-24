@@ -144,17 +144,25 @@ pub fn run_daemon(args: Args) -> Result<()> {
         if item.next_notification > now {
             continue;
         }
-
-        // Spawn notifier for due item
+        // Spawn notifier for due item, unless the category is currently being tracked
         let Some(item) = heap.pop() else {
             continue;
         };
-        let cat = item.category.clone();
-        if let Err(e) = Command::new(&args.notifier)
-            .arg(item.category.as_ref())
-            .spawn()
-        {
-            println!("{cat}: failed to spawn notifier: {e}");
+        let being_tracked = db.try_lock(|db| {
+            Ok(db
+                .entries()
+                .rev()
+                .take(10)
+                .filter_map(|r| r.ok())
+                .any(|(_, entry)| entry.category == item.category && entry.is_being_tracked))
+        })?;
+        if !being_tracked {
+            if let Err(e) = Command::new(&args.notifier)
+                .arg(item.category.as_ref())
+                .spawn()
+            {
+                println!("{}: failed to spawn notifier: {e}", item.category);
+            }
         }
 
         db.try_lock(|db| {
@@ -166,11 +174,13 @@ pub fn run_daemon(args: Args) -> Result<()> {
                 let now = crate::utils::time::now_local();
                 let today_start = now.replace_time(Time::MIDNIGHT);
                 let today_end = today_start.saturating_add(time::Duration::DAY);
-                let goal: Option<u64> = info.data(&cat).and_then(|d| d.goal.map(|g| g.get()));
+                let goal: Option<u64> = info
+                    .data(&item.category)
+                    .and_then(|d| d.goal.map(|g| g.get()));
                 let total: u64 = db
                     .entries()
                     .filter_map(|r| match r {
-                        Ok((_, entry)) if entry.category == cat => entry
+                        Ok((_, entry)) if entry.category == item.category => entry
                             .start_time_local()
                             .ok()
                             .filter(|dt| *dt >= today_start && *dt < today_end)
@@ -190,10 +200,13 @@ pub fn run_daemon(args: Args) -> Result<()> {
             };
 
             // Record next notification time
-            if let Some(data) = info.data_mut(&cat) {
+            if let Some(data) = info.data_mut(&next_item.category) {
                 data.set_next_notification_local(Some(next_item.next_notification));
                 if let Err(e) = db.write_info(&info) {
-                    println!("{cat}: failed to save next_notification: {e}");
+                    println!(
+                        "{}: failed to save next_notification: {e}",
+                        next_item.category
+                    );
                 }
             }
             println!(
