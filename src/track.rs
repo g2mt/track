@@ -10,17 +10,16 @@ use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
 
 pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
-    fn save_entry(db: &mut ReloadableDb, db_entry: &Entry) -> Result<()> {
+    fn replace_older_entry(db: &mut ReloadableDb, db_entry: &Entry) -> Result<()> {
         db.try_lock(|db| {
-            let span = db
-                .entries()
-                .rev()
-                .filter_map(|r| r.ok())
-                .find(|(_, e)| e.category.as_ref() == db_entry.category.as_ref())
-                .map(|(s, _)| s);
-            if let Some(span) = span {
-                db.replace_entry(span, db_entry)?;
+            for res in db.entries().rev().take(10) {
+                let (span, entry) = res?;
+                if entry.category.as_ref() == db_entry.category.as_ref() {
+                    db.replace_entry(span, db_entry)?;
+                    return Ok(());
+                }
             }
+            db.append_entry(db_entry)?;
             Ok(())
         })
     }
@@ -143,14 +142,14 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
 
         if elapsed.whole_seconds() % 300 == 0 {
             db_entry.set_end_time_local(crate::utils::time::now_local());
-            save_entry(&mut db, &db_entry)?;
+            replace_older_entry(&mut db, &db_entry)?;
         }
     }
     drop(stop);
 
     // One last save
     db_entry.set_end_time_local(crate::utils::time::now_local());
-    save_entry(&mut db, &db_entry)?;
+    replace_older_entry(&mut db, &db_entry)?;
 
     // Move past the progress bar line
     print!("\n");
