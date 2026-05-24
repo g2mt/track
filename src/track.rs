@@ -144,6 +144,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
 
         if elapsed.whole_seconds() % 300 == 0 {
             db_entry.set_end_time_local(crate::utils::time::now_local());
+            db_entry.is_being_tracked = true;
             replace_older_entry(&mut db, &db_entry)?;
         }
     }
@@ -151,6 +152,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
 
     // One last save
     db_entry.set_end_time_local(crate::utils::time::now_local());
+    db_entry.is_being_tracked = false;
     replace_older_entry(&mut db, &db_entry)?;
 
     // Move past the progress bar line

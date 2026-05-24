@@ -286,6 +286,9 @@ pub struct Entry {
     pub(super) start_time: u64,
     /// UTC timestamp for when the Entry ends. Only modified by raw database functions
     pub(super) end_time: u64,
+    /// Flag to check if the current entry is the target of a track command
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub is_being_tracked: bool,
 }
 
 #[allow(dead_code)]
@@ -295,6 +298,7 @@ impl Entry {
             category,
             start_time: 0,
             end_time: 0,
+            is_being_tracked: false,
         }
     }
 
