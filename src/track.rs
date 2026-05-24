@@ -10,11 +10,11 @@ use crate::database::{CategoryType, Entry, ReloadableDb};
 use crate::utils;
 
 pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
-    let pair = Arc::new((Mutex::new(false), Condvar::new()));
+    let exited = Arc::new((Mutex::new(false), Condvar::new()));
     {
-        let p = pair.clone();
+        let exited = exited.clone();
         ctrlc::set_handler(move || {
-            let (lock, cvar) = &*p;
+            let (lock, cvar) = &*exited;
             *lock.lock().unwrap() = true;
             cvar.notify_one();
         })?;
@@ -71,7 +71,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
         return Ok(());
     }
 
-    let (lock, cvar) = &*pair;
+    let (lock, cvar) = &*exited;
     let mut stop = lock.lock().unwrap();
     while !*stop {
         let term_w = terminal_size().map(|(w, _)| w.0 as usize).unwrap_or(80);
