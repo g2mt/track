@@ -81,6 +81,7 @@ pub fn track(mut db: ReloadableDb, category: Arc<str>) -> Result<()> {
 
         db_entry.set_start_time_local(start);
         db_entry.set_end_time_local(start);
+        db_entry.is_being_tracked = true;
         db.append_entry(&db_entry)?;
 
         Ok(false)
