@@ -80,6 +80,16 @@ pub struct Args<'a> {
     pub db: ReloadableDb,
     pub notifier: &'a str,
     pub notify_again: Frequency,
+    pub off_from: i8,
+    pub off_to: i8,
+}
+
+fn is_off_hours(off_from: i8, off_to: i8, now: OffsetDateTime) -> bool {
+    if off_from < 0 || off_to < 0 {
+        return false;
+    }
+    let hour = now.hour() as i8;
+    hour >= off_from && hour <= off_to
 }
 
 pub fn run_daemon(args: Args) -> Result<()> {
@@ -127,6 +137,9 @@ pub fn run_daemon(args: Args) -> Result<()> {
         state = wait_result.0;
         if *state {
             break;
+        }
+        if is_off_hours(args.off_from, args.off_to, now) {
+            continue;
         }
 
         let reloaded;

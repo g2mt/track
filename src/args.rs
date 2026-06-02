@@ -114,6 +114,18 @@ pub struct Args {
     )]
     pub notify_again: Frequency,
 
+    /// Don't notify from this hour (inclusive), -1 disables
+    #[arg(
+        long = "off-from",
+        default_value = "-1",
+        help_heading = "Notifications"
+    )]
+    pub off_from: i8,
+
+    /// Don't notify to this hour (inclusive), -1 disables
+    #[arg(long = "off-to", default_value = "-1", help_heading = "Notifications")]
+    pub off_to: i8,
+
     /// Show a debug heatmap (day: 24 columns, month: 7x5 grid)
     #[cfg(debug_assertions)]
     #[arg(long, value_enum)]

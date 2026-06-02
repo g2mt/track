@@ -46,10 +46,15 @@ fn main() -> Result<()> {
     // Notify
 
     if args.notify {
+        if args.off_from >= 0 && args.off_to >= 0 && args.off_to < args.off_from {
+            anyhow::bail!("--off-to must be >= --off-from");
+        }
         return notify::run_daemon(notify::Args {
             db: args.open_database(true)?.try_into()?,
             notifier: &args.notifier,
             notify_again: args.notify_again.clone(),
+            off_from: args.off_from,
+            off_to: args.off_to,
         });
     }
 
