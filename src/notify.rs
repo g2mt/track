@@ -144,13 +144,13 @@ pub fn run_daemon(args: Args) -> Result<()> {
         if reloaded {
             println!("[{}] reloaded", crate::utils::time::now_local());
             info = db.try_lock(|db| Ok(db.read_info()?.unwrap_or_default()))?;
+            heap = build_heap(&info, now);
         }
 
         let now = crate::utils::time::now_local();
         if is_off_hours(args.off_from, args.off_to, now) {
             continue;
         }
-        heap = build_heap(&info, now);
 
         // Nothing due yet, keep polling
         let Some(item) = heap.peek() else {

@@ -100,10 +100,6 @@ impl self::traits::Changeable for FileWithPath {
     fn changed(&self) -> bool {
         std::fs::metadata(&self.open_args.0)
             .ok()
-            .is_some_and(|meta| {
-                let size_changed = meta.len() != self.snap.1;
-                let mtime_changed = self.snap.0 != meta.modified().ok();
-                size_changed || mtime_changed
-            })
+            .is_some_and(|meta| (meta.modified().ok(), meta.len()) != self.snap)
     }
 }
