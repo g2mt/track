@@ -70,4 +70,4 @@ Subsequent lines are objects representing time entries, and are not padded by wh
 
 ## License
 
-MIT
+MIT License. Contains AI-generated code.
