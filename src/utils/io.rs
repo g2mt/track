@@ -39,11 +39,10 @@ impl FileWithPath {
         let file = options.open(&path)?;
         Self::try_lock_with_retry(&file)?;
         let metadata = file.metadata()?;
-        let snap = (metadata.modified().ok(), metadata.len());
         Ok(Self {
             file,
             open_args: (path, options),
-            snap,
+            snap: (metadata.modified().ok(), metadata.len()),
         })
     }
 
@@ -55,7 +54,9 @@ impl FileWithPath {
         Self::try_lock_with_retry(&self.file)
     }
 
-    pub fn unlock(&self) -> io::Result<()> {
+    pub fn unlock(&mut self) -> io::Result<()> {
+        let metadata = self.open_args.0.metadata()?;
+        self.snap = (metadata.modified().ok(), metadata.len());
         self.file.unlock()
     }
 }

@@ -12,8 +12,8 @@ use anyhow::Result;
 pub use base::Database;
 pub use schema::{CategoryData, CategoryType, Entry, Frequency, Info};
 
-use crate::utils::io::FileWithPath;
 use crate::utils::io::traits::Changeable;
+use crate::utils::io::FileWithPath;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Span {
@@ -49,7 +49,7 @@ impl ReloadableDb {
         if self.db.backing.changed() {
             let (path, options) = self.db.backing.into_open_args();
             // initial lock ensures that the metadata read by open isn't changed
-            let file = FileWithPath::open(path, options)?;
+            let mut file = FileWithPath::open(path, options)?;
             file.unlock()?;
             self.db = Database::new(file);
             self.locked = false;
@@ -78,7 +78,7 @@ impl ReloadableDb {
 impl TryInto<ReloadableDb> for NormalDb {
     type Error = std::io::Error;
 
-    fn try_into(self) -> Result<ReloadableDb, Self::Error> {
+    fn try_into(mut self) -> Result<ReloadableDb, Self::Error> {
         self.backing.unlock()?;
         Ok(ReloadableDb {
             db: self,
