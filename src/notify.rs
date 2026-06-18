@@ -163,23 +163,6 @@ pub fn run_daemon(args: Args) -> Result<()> {
         let Some(item) = heap.pop() else {
             continue;
         };
-        let being_tracked = db.try_lock(|db| {
-            Ok(db
-                .entries()
-                .rev()
-                .take(track::LATEST_ENTRIES_TRACKED)
-                .filter_map(|r| r.ok())
-                .any(|(_, entry)| entry.category == item.category && entry.is_being_tracked))
-        })?;
-        if !being_tracked {
-            if let Err(e) = Command::new(&args.notifier)
-                .arg(item.category.as_ref())
-                .spawn()
-            {
-                println!("{}: failed to spawn notifier: {e}", item.category);
-            }
-        }
-
         db.try_lock(|db| {
             // Write to database and update notification times
             // done_today is true when the total tracked duration for this category
@@ -205,6 +188,23 @@ pub fn run_daemon(args: Args) -> Result<()> {
                     .sum();
                 goal.map_or(true, |g| total >= g)
             };
+
+            let being_tracked = db
+                .entries()
+                .rev()
+                .take(track::LATEST_ENTRIES_TRACKED)
+                .filter_map(|r| r.ok())
+                .any(|(_, entry)| entry.category == item.category && entry.is_being_tracked);
+            if !done_today && !being_tracked {
+                if let Err(e) = Command::new(&args.notifier)
+                    .arg(item.category.as_ref())
+                    .spawn()
+                {
+                    println!("{}: failed to spawn notifier: {e}", item.category);
+                }
+            }
+
+            // Create next item to push onto heap
             let next_item = if !done_today {
                 let mut item = item;
                 item.next_notification =
