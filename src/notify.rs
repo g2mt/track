@@ -6,6 +6,7 @@ use std::time::Duration;
 use anyhow::Result;
 use time::{OffsetDateTime, Time};
 
+use crate::database::range::TimeRange;
 use crate::database::{Frequency, Info, ReloadableDb};
 use crate::track;
 
@@ -175,17 +176,16 @@ pub fn run_daemon(args: Args) -> Result<()> {
                 let goal: Option<u64> = info
                     .data(&item.category)
                     .and_then(|d| d.goal.map(|g| g.get()));
-                let total: u64 = db
-                    .entries()
-                    .filter_map(|r| match r {
-                        Ok((_, entry)) if entry.category == item.category => entry
-                            .start_time_local()
-                            .ok()
-                            .filter(|dt| *dt >= today_start && *dt < today_end)
-                            .map(|_| entry.elapsed_seconds()),
-                        _ => None,
-                    })
-                    .sum();
+                let mut total: u64 = 0;
+                for res in db.latest_entries_range(TimeRange {
+                    from: Some(today_start),
+                    to: Some(today_end),
+                }) {
+                    let (_, entry) = res?;
+                    if entry.category == item.category {
+                        total += entry.elapsed_seconds();
+                    }
+                }
                 goal.map_or(true, |g| total >= g)
             };
 
