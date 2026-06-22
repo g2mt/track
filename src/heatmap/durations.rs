@@ -67,6 +67,13 @@ impl HeatmapDurations {
         }
     }
 
+    pub fn legend_label(&self) -> &str {
+        match self {
+            Self::Hourly { .. } => "1 block = 1 hour",
+            Self::Daily { .. } => "1 block = 1 day",
+        }
+    }
+
     pub fn show(&self, terminal_width: Option<u16>) {
         match self {
             Self::Hourly { buckets, from } => {

@@ -18,6 +18,7 @@ pub struct Args {
     pub category_match: Option<CategoryMatch>,
     pub clean: bool,
     pub align: Align,
+    pub hide_legend: bool,
 }
 
 pub fn show_logs(args: Args) -> Result<()> {
@@ -28,6 +29,7 @@ pub fn show_logs(args: Args) -> Result<()> {
         category_match,
         clean,
         align,
+        hide_legend,
     } = args;
 
     let info = db.read_info()?.unwrap_or_default();
@@ -146,6 +148,21 @@ pub fn show_logs(args: Args) -> Result<()> {
 
     // Heatmap
     heatmap_durations.show(Some(terminal_width));
+
+    if !hide_legend {
+        align.print(
+            &[
+                TextFragment::Ansi(
+                    &anstyle::Style::new()
+                        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::BrightBlack))),
+                ),
+                TextFragment::Raw(heatmap_durations.legend_label()),
+                TextFragment::Ansi(&anstyle::Reset),
+            ],
+            terminal_width,
+        );
+        println!();
+    }
 
     // Cleaning prompt
     if clean && tail_span.is_some() {

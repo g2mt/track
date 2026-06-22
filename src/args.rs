@@ -206,4 +206,8 @@ pub struct Logs {
     /// Show this year's logs
     #[arg(long, help_heading = "Logs")]
     pub this_year: bool,
+
+    /// Hide the heatmap legend
+    #[arg(long = "hide-legend", help_heading = "Logs")]
+    pub hide_legend: bool,
 }

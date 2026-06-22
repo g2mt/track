@@ -198,6 +198,7 @@ fn main() -> Result<()> {
             category_match: args.category_match()?,
             clean: args.clean,
             align: args.align.clone(),
+            hide_legend: args.logs.hide_legend,
         });
     }
 
