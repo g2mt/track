@@ -7,6 +7,14 @@ use time::OffsetDateTime;
 use super::*;
 use crate::utils::io::traits::Truncate;
 
+pub struct MergeResult {
+    /// Number of new entries merged from source
+    pub new_source_entries: u64,
+    /// The latest entry shared between the merge destination and source, includes its offset in
+    /// the destination database
+    pub common_span_entry: Option<(Span, Entry)>,
+}
+
 pub struct Database<Backing: Seek + Read> {
     #[cfg(test)]
     pub(crate) backing: Backing,
@@ -203,5 +211,70 @@ impl<Backing: Seek + Read + Write + Truncate> Database<Backing> {
         self.backing.set_len(new_len)?;
 
         Ok(removed)
+    }
+
+    /// Merges entries from `source` into `self`.
+    ///
+    /// Walks both databases backwards to find the latest common entry (compared by
+    /// equality). Everything after that common entry is considered divergent.
+    /// `self` is truncated to keep only entries up to (and including) the common
+    /// entry, then all unique entries from both databases' divergent portions are
+    /// appended, sorted by start time.
+    pub fn merge(&mut self, source: &mut Self) -> Result<MergeResult> {
+        let (mut divergent, new_source_entries, common_entry) = {
+            let mut self_iter = self.entries();
+            let mut source_iter = source.entries();
+
+            let mut divergent = Vec::new();
+            let mut new_source_entries: u64 = 0;
+            let mut common_entry: Option<(Span, Entry)> = None;
+
+            loop {
+                let self_next = self_iter.next_back();
+                let source_next = source_iter.next_back();
+
+                match (self_next, source_next) {
+                    (Some(Ok((ss, se))), Some(Ok((_, te)))) => {
+                        if se == te {
+                            common_entry = Some((ss, se));
+                            break;
+                        }
+                        divergent.push(se);
+                        divergent.push(te);
+                        new_source_entries += 1;
+                    }
+                    (Some(Ok((_, se))), None) => {
+                        divergent.push(se);
+                        break;
+                    }
+                    (None, Some(Ok((_, te)))) => {
+                        divergent.push(te);
+                        new_source_entries += 1;
+                        break;
+                    }
+                    (None, None) => break,
+                    (Some(Err(e)), _) | (_, Some(Err(e))) => return Err(e),
+                }
+            }
+
+            (divergent, new_source_entries, common_entry)
+        };
+
+        // Truncate self: remove everything after the common entry
+        let truncate_start = common_entry
+            .as_ref()
+            .map(|(span, _)| Span::new(span.end(), span.end()));
+        self.remove_span(truncate_start, None)?;
+
+        // Append all divergent entries, sorted by start time
+        divergent.sort_by_key(|e| e.start_time);
+        for entry in &divergent {
+            self.append_entry(entry)?;
+        }
+
+        Ok(MergeResult {
+            new_source_entries,
+            common_span_entry: common_entry,
+        })
     }
 }

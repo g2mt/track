@@ -440,3 +440,88 @@ fn remove_span_removes_tail_entries() {
     assert_eq!(remaining[1], entries[1]);
     assert_eq!(remaining[2], entries[2]);
 }
+
+#[test]
+fn merge_two_databases() {
+    let mut dest: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
+    let mut source: Database<MockFile> = Database::new(MockFile {
+        data: RefCell::new(vec![]),
+        pos: 0,
+    });
+
+    let info = Info::default();
+    dest.write_info(&info).unwrap();
+    source.write_info(&info).unwrap();
+
+    let e1 = Entry {
+        category: "a".into(),
+        start_time: 10,
+        end_time: 15,
+        is_being_tracked: false,
+    };
+    let e2 = Entry {
+        category: "b".into(),
+        start_time: 20,
+        end_time: 25,
+        is_being_tracked: false,
+    };
+    let e3 = Entry {
+        category: "c".into(),
+        start_time: 30,
+        end_time: 35,
+        is_being_tracked: false,
+    };
+    let e4 = Entry {
+        category: "d".into(),
+        start_time: 40,
+        end_time: 45,
+        is_being_tracked: false,
+    };
+    let e5 = Entry {
+        category: "e".into(),
+        start_time: 50,
+        end_time: 55,
+        is_being_tracked: false,
+    };
+    let e6 = Entry {
+        category: "f".into(),
+        start_time: 60,
+        end_time: 65,
+        is_being_tracked: false,
+    };
+
+    // dest: [e1, e2, e3, e4]
+    dest.append_entry(&e1).unwrap();
+    dest.append_entry(&e2).unwrap();
+    dest.append_entry(&e3).unwrap();
+    dest.append_entry(&e4).unwrap();
+
+    // source: [e1, e2, e5, e6]
+    source.append_entry(&e1).unwrap();
+    source.append_entry(&e2).unwrap();
+    source.append_entry(&e5).unwrap();
+    source.append_entry(&e6).unwrap();
+
+    let result = dest.merge(&mut source).unwrap();
+
+    assert_eq!(result.new_source_entries, 2);
+    assert!(result.common_span_entry.is_some());
+    assert_eq!(result.common_span_entry.unwrap().1, e2);
+
+    let merged: Vec<Entry> = dest
+        .entries()
+        .filter_map(|r| r.ok().map(|(_, e)| e))
+        .collect();
+
+    assert_eq!(merged.len(), 6);
+    // Entries sorted by start_time
+    assert_eq!(merged[0], e1);
+    assert_eq!(merged[1], e2);
+    assert_eq!(merged[2], e3);
+    assert_eq!(merged[3], e4);
+    assert_eq!(merged[4], e5);
+    assert_eq!(merged[5], e6);
+}
