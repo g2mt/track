@@ -11,6 +11,8 @@
 - Do not use the native `SystemTime`, `Duration`. Use the `time` crate instead.
 - To get the current local time, use `crate::utils::time::now_local()` returning `OffsetDateTime`.
 - For functions facilitating CLI interactions, ALWAYS use local time.
+- Use `crate::utils::time::DATETIME_FMT` (a `LazyLock` format description) instead of calling `time::format_description::parse` repeatedly. It formats as `[year]-[month]-[day] [hour]:[minute]:[second]`.
+- When merging databases with `--merge-from`, the merged entries count and date range (from the common ancestor entry to the latest source entry) are printed to stdout.
 - To format `time::Duration`, use the `unsigned_abs` function to convert to the standard `Duration`, then call `humantime::format_duration`:
 
 ```rust

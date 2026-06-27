@@ -17,6 +17,7 @@ use database::CategoryData;
 mod heatmap;
 mod logs;
 mod manip;
+mod merge;
 mod notify;
 mod track;
 mod utils;
@@ -122,6 +123,15 @@ fn main() -> Result<()> {
     if args.debug_chart {
         chart::show_debug_chart(5);
         return Ok(());
+    }
+
+    // Merge
+
+    if let Some(ref source_path) = args.merge_from {
+        return merge::merge_from(merge::Args {
+            dest: args.open_database(true)?,
+            source_path: source_path.clone(),
+        });
     }
 
     // Chart

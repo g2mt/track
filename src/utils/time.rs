@@ -1,10 +1,16 @@
-use std::sync::OnceLock;
+use std::sync::{LazyLock, OnceLock};
 
 use anyhow::Result;
 use humantime::parse_rfc3339_weak;
 use time::{Duration, Month, OffsetDateTime, Time, UtcOffset};
 
 static LOCAL_OFFSET: OnceLock<UtcOffset> = OnceLock::new();
+
+pub static DATETIME_FMT: LazyLock<Vec<time::format_description::BorrowedFormatItem<'static>>> =
+    LazyLock::new(|| {
+        time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
+            .expect("valid format description")
+    });
 
 pub fn init_local_offset() {
     LOCAL_OFFSET
@@ -82,15 +88,13 @@ pub fn print_date_range_header(
     to: Option<&OffsetDateTime>,
     terminal_width: u16,
 ) {
-    let fmt = time::format_description::parse("[year]-[month]-[day] [hour]:[minute]:[second]")
-        .expect("valid format description");
     let date_ansi =
         anstyle::Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)));
     let from_s = from
-        .map(|dt| dt.format(&fmt).unwrap())
+        .map(|dt| dt.format(&*DATETIME_FMT).unwrap())
         .unwrap_or_else(|| "beginning".to_string());
     let to_s = to
-        .map(|dt| dt.format(&fmt).unwrap())
+        .map(|dt| dt.format(&*DATETIME_FMT).unwrap())
         .unwrap_or_else(|| "now".to_string());
     align.print(
         &[

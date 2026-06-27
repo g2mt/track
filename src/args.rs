@@ -31,6 +31,10 @@ pub struct Args {
     #[arg(short = 'f', long = "file")]
     pub file: Option<String>,
 
+    /// Merge entries from another database file
+    #[arg(long = "merge-from", value_name = "FILE")]
+    pub merge_from: Option<PathBuf>,
+
     /// Set daily goal for a project (e.g. "1h")
     #[arg(short = 'g', long)]
     pub goal: Option<String>,
